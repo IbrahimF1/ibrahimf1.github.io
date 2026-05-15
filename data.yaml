@@ -1,0 +1,261 @@
+# ============================================================
+# PORTFOLIO://ENGINEER — CENTRALIZED DATA SOURCE
+# Single source of truth for all site content.
+# Add/remove entries freely — the UI scales automatically.
+# ============================================================
+
+site:
+  title: "SOFTWARE_ENGINEER://IBRAHIM"
+  description: "Portfolio of Ibrahim — Results-driven Software Engineer with a strong foundation in full-stack web development, computer science, and applied machine learning."
+  version: "1.0.0"
+  theme_color: "#0a0a0a"
+
+# ---- NAVIGATION ----
+# Each item becomes a nav link. The `id` must match a section id.
+nav:
+  - id: "hero"
+    label: "00_HOME"
+    data_section: "00"
+  - id: "about"
+    label: "01_ABOUT"
+    data_section: "01"
+  - id: "projects"
+    label: "02_PROJECTS"
+    data_section: "02"
+  - id: "experience"
+    label: "03_EXP"
+    data_section: "03"
+  - id: "contact"
+    label: "04_CONTACT"
+    data_section: "04"
+
+# ---- HERO SECTION ----
+hero:
+  bg_text: "ENGINEER"
+  tags:
+    top: "SOFTWARE"
+    bottom: "& SYSTEMS"
+  name:
+    line1: "IBRAHIM"
+    line2: "FARUQUEE"
+  debris:
+    - content: "///"
+    - content: "[>]"
+    - content: "{ }"
+    - content: "00"
+    - content: "</>"
+  brackets:
+    left: "["
+    right: "]"
+  social:
+    - platform: "github"
+      url: "https://github.com/IbrahimF1"
+      rotation: -8
+      float_class: "hero-social-float--github"
+      social_class: "hero-social--github"
+      aria_label: "GitHub"
+    - platform: "linkedin"
+      url: "https://www.linkedin.com/in/ibrahim-f1"
+      rotation: 6
+      float_class: "hero-social-float--linkedin"
+      social_class: "hero-social--linkedin"
+      aria_label: "LinkedIn"
+  meta:
+    scroll_text: "SCROLL TO DECONSTRUCT"
+    scroll_indicator: "↓"
+
+# ---- ABOUT SECTION ----
+about:
+  number: "01"
+  heading:
+    - "I BUILD"
+    - "<span class=\"strike\">THINGS</span>"
+    - "SYSTEMS"
+  texts:
+    - >-
+      Results-driven Software Engineer with a strong foundation in
+      full-stack web development, computer science, and applied
+      machine learning. Experienced in building production-style
+      applications using the MERN stack, real-time systems, and
+      AI-powered features under sprint and hackathon deadlines.
+    - >-
+      Proven collaborator with award-winning projects spanning web,
+      3D visualization, hardware-integrated systems, and generative AI,
+      bringing a user-centered and systems-oriented approach to solving
+      complex technical problems.
+  specs:
+    - label: "STACK::"
+      value: "Python / TypeScript / JavaScript / React / Node.js"
+    - label: "FOCUS::"
+      value: "Full-Stack / Machine Learning / Real-Time Systems"
+    - label: "YRS::"
+      value: "BOOTCAMP 2026"
+    - label: "STATUS::"
+      value: "OPEN TO WORK"
+  debris:
+    - content: "SYS"
+    - content: "0x4F"
+    - content: "::"
+
+# ---- PROJECTS SECTION ----
+projects:
+  bg_text: "WORK"
+  heading:
+    number: "02"
+    line1: "SELECTED"
+    line2: "PROJECTS"
+    stroke_line: 2  # Which line gets the stroke effect (1-indexed)
+  debris:
+    - content: "PRJ"
+    - content: "0x3F"
+    - content: "::"
+    - content: "//"
+  items:
+    - index: "01"
+      title_prefix: "FACEY"
+      title_separator: "://"
+      title_suffix: "BUK"
+      description: "1st place-winning interactive storytelling app allowing parents to read bedtime stories to their children in real time. Integrated WebRTC, Socket.IO, and ElevenLabs API for immersive experiences."
+      image_webp: "assets/projects/project1.png"
+      image_fallback: "assets/projects/project1.png"
+      image_alt: "Interactive storytelling app"
+      tags:
+        - "HTML5"
+        - "CSS3"
+        - "JavaScript"
+        - "Socket.IO"
+        - "WebRTC"
+
+    - index: "02"
+      title_prefix: "SCENE"
+      title_separator: "://"
+      title_suffix: "SPAT"
+      description: "Forensic investigation platform that automatically detects evidence in 3D scenes using Google Gemini Vision API. Won 1st Place in 24-hour hackathon with 2D-to-3D coordinate mapping algorithm."
+      image_webp: "assets/projects/project2.gif"
+      image_fallback: "assets/projects/project2.gif"
+      image_alt: "3D forensic analysis platform"
+      tags:
+        - "TypeScript"
+        - "React"
+        - "Next.js"
+        - "three.js"
+        - "Gemini API"
+
+    - index: "03"
+      title_prefix: "HEAT"
+      title_separator: "://"
+      title_suffix: "AWARE"
+      description: "Real-time IoT heatstroke alert system with AI-driven notification engine. Won 1st Place in 'Strengthen Society' category for future vehicle safety application."
+      image_webp: "assets/projects/project3.jpeg"
+      image_fallback: "assets/projects/project3.jpeg"
+      image_alt: "IoT heatstroke alert system"
+      tags:
+        - "Python"
+        - "Node.js"
+        - "MongoDB"
+        - "Twilio API"
+        - "Gemini API"
+
+# ---- EXPERIENCE SECTION ----
+experience:
+  items:
+    - index: "01"
+      period: "2026—PRESENT"
+      title: "ARTIFICIAL INTELLIGENCE TECH FELLOW"
+      company: "CODEPATH"
+      description: >-
+        Mentored 15+ students in applied AI engineering on PyTorch,
+        LLM integration, RAG, and AI-assisted Python workflows.
+        Facilitated technical sessions on supervised learning,
+        deep learning, and ethical AI.
+      tags:
+        - "PyTorch"
+        - "LLM"
+        - "RAG"
+        - "AI Engineering"
+
+    - index: "02"
+      period: "2024—2025"
+      title: "DATA SCIENCE FELLOW"
+      company: "CUNY TECH PREP"
+      description: >-
+        Engaged in courses covering exploratory data analysis,
+        feature engineering, and data collection. Developed technical
+        projects leveraging Pandas, Scikit-learn, MySQL, and MongoDB.
+      tags:
+        - "Python"
+        - "Pandas"
+        - "Scikit-learn"
+        - "MySQL"
+        - "MongoDB"
+
+    - index: "03"
+      period: "2025"
+      title: "SOFTWARE ENGINEERING MENTEE"
+      company: "GOOGLE x CODEPATH"
+      description: >-
+        Participated in mentorship program focused on software
+        engineering best practices and industry-aligned development.
+      tags:
+        - "Mentorship"
+        - "Software Engineering"
+
+    - index: "04"
+      period: "2025"
+      title: "DATA ANALYTICS FELLOW"
+      company: "COOP CAREER"
+      description: >-
+        Completed fellowship program in data analytics, gaining
+        hands-on experience with data analysis and visualization.
+      tags:
+        - "Data Analytics"
+        - "Visualization"
+
+  debris:
+    - content: "EXP"
+    - content: "0x2A"
+
+# ---- CONTACT SECTION ----
+contact:
+  heading:
+    line1: "LET'S"
+    line2: "BUILD"
+  sub_text: >-
+    Currently open to roles that push boundaries.
+    Preferably in full-stack development, machine learning,
+    or real-time systems.
+  links:
+    - label: "EMAIL::"
+      url: "mailto:ifaruquee1@gmail.com"
+      value: "ifaruquee1@gmail.com"
+    - label: "GITHUB::"
+      url: "#"
+      value: "github.com/IbrahimF1"
+    - label: "LINKEDIN::"
+      url: "#"
+      value: "linkedin.com/in/ibrahim-f1"
+  form:
+    fields:
+      - name: "NAME_"
+        type: "text"
+        placeholder: "enter name..."
+      - name: "EMAIL_"
+        type: "email"
+        placeholder: "enter email..."
+      - name: "MESSAGE_"
+        type: "textarea"
+        placeholder: "enter message..."
+        rows: 6
+    submit_text: "TRANSMIT →"
+  debris:
+    - content: "}"
+    - content: ":://"
+    - content: "[ ]"
+    - content: "→"
+    - content: "///"
+    - icon: "github"
+    - icon: "linkedin"
+  footer:
+    - "© 2026 — DESIGNED & ENGINEERED"
+    - "BUILT WITH RAW HTML/CSS/JS"
+    - "v1.0.0"
