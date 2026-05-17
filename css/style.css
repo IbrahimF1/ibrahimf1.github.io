@@ -1508,6 +1508,7 @@ a:hover {
     padding: 0;
     z-index: 1001;
     transition: border-color 0.2s ease-out;
+    -webkit-tap-highlight-color: transparent;
 }
 
 .nav-hamburger:hover {
@@ -1583,6 +1584,7 @@ a:hover {
     position: relative;
     transform: translateY(20px);
     opacity: 0;
+    -webkit-tap-highlight-color: transparent;
 }
 
 .mobile-menu.is-open .mobile-menu-link {
