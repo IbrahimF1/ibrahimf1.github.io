@@ -349,49 +349,6 @@ function generateContact(data) {
     leftBlock.appendChild(linksDiv);
     container.appendChild(leftBlock);
 
-    // Right block: form
-    const rightBlock = document.createElement('div');
-    rightBlock.className = 'contact-block contact-block--right';
-
-    const form = document.createElement('form');
-    form.className = 'contact-form';
-    form.addEventListener('submit', (e) => e.preventDefault());
-
-    contact.form.fields.forEach(field => {
-        const fieldDiv = document.createElement('div');
-        fieldDiv.className = 'form-field';
-
-        const label = document.createElement('label');
-        label.className = 'form-label';
-        label.textContent = field.name;
-        fieldDiv.appendChild(label);
-
-        if (field.type === 'textarea') {
-            const textarea = document.createElement('textarea');
-            textarea.className = 'form-input form-textarea';
-            textarea.placeholder = field.placeholder;
-            textarea.rows = field.rows || 6;
-            fieldDiv.appendChild(textarea);
-        } else {
-            const input = document.createElement('input');
-            input.type = field.type;
-            input.className = 'form-input';
-            input.placeholder = field.placeholder;
-            fieldDiv.appendChild(input);
-        }
-
-        form.appendChild(fieldDiv);
-    });
-
-    const submitBtn = document.createElement('button');
-    submitBtn.type = 'submit';
-    submitBtn.className = 'form-submit';
-    submitBtn.textContent = contact.form.submit_text;
-    form.appendChild(submitBtn);
-
-    rightBlock.appendChild(form);
-    container.appendChild(rightBlock);
-
     // Footer
     contact.footer.forEach(text => {
         const span = document.createElement('span');
@@ -920,17 +877,7 @@ function initAnimations(data) {
             let masterTl = null;
 
             gsap.set('.contact-block--left', { y: mf(100), opacity: 0 });
-            gsap.set('.contact-block--right', { y: mf(150), opacity: 0, x: mf(-40) });
             gsap.set('.contact-char', { opacity: 0, y: isMobile ? 15 : 30, skewX: isMobile ? 5 : 15 });
-
-            // Form fields — alternating directions
-            const formFields = document.querySelectorAll('.contact-form .form-field');
-            formFields.forEach((field, i) => {
-                const xDir = i % 2 === 0 ? -1 : 1;
-                const xVal = mf(xDir * (120 - i * 20));
-                gsap.set(field, { x: xVal, opacity: 0 });
-            });
-            gsap.set('.contact-form .form-submit', { y: mf(40), opacity: 0, skewX: isMobile ? -3 : -10 });
 
             gsap.set('.contact-sub', { x: mf(-200), opacity: 0 });
             gsap.set('.contact-link', { x: mf(-100), opacity: 0 });
@@ -959,13 +906,6 @@ function initAnimations(data) {
                     duration: 0.8,
                     ease: 'power3.out'
                 }, 0.3);
-                tl.to('.contact-block--right', {
-                    y: isMobile ? 0 : 40,
-                    opacity: 1,
-                    x: isMobile ? 0 : -40,
-                    duration: 0.8,
-                    ease: 'power3.out'
-                }, 0.5);
 
                 // Phase 4: Character-by-character heading
                 tl.to('.contact-heading-line:first-of-type .contact-char', {
@@ -1002,25 +942,6 @@ function initAnimations(data) {
                     stagger: 0.1,
                     ease: 'power2.out'
                 }, 1.0);
-
-                // Phase 7: Form fields
-                formFields.forEach((field, i) => {
-                    tl.to(field, {
-                        x: 0,
-                        opacity: 1,
-                        duration: 0.5,
-                        ease: 'power2.out'
-                    }, 0.8 + i * 0.15);
-                });
-
-                // Phase 8: Submit button
-                tl.to('.contact-form .form-submit', {
-                    y: 0,
-                    opacity: 1,
-                    skewX: 0,
-                    duration: 0.4,
-                    ease: 'back.out(1.5)'
-                }, 1.2);
 
                 // Phase 9: Footer
                 tl.to('.contact-footer', {
@@ -1196,36 +1117,6 @@ function getContactDebrisParallaxAnim(index) {
     return patterns[(index - 1) % patterns.length];
 }
 
-// ---- FORM SUBMIT HANDLER ----
-function initFormHandler() {
-    const submitBtn = document.querySelector('.form-submit');
-    if (!submitBtn) return;
-
-    submitBtn.addEventListener('click', function(e) {
-        e.preventDefault();
-        const btn = this;
-        const originalText = btn.textContent;
-        btn.textContent = 'TRANSMITTED ✓';
-        btn.style.borderColor = 'var(--accent)';
-        btn.style.color = 'var(--accent)';
-
-        gsap.to(btn, {
-            skewX: 5,
-            duration: 0.05,
-            yoyo: true,
-            repeat: 5,
-            onComplete: () => {
-                gsap.to(btn, { skewX: 0, duration: 0.1 });
-                setTimeout(() => {
-                    btn.textContent = originalText;
-                    btn.style.borderColor = '';
-                    btn.style.color = '';
-                }, 2000);
-            }
-        });
-    });
-}
-
 // ---- REFRESH SCROLLTRIGGER ON RESIZE ----
 let resizeTimer;
 window.addEventListener('resize', () => {
@@ -1262,7 +1153,6 @@ window.addEventListener('resize', () => {
 
             // Initialize animations after DOM is populated
             initAnimations(data);
-            initFormHandler();
         })
         .catch(err => {
             console.error('Portfolio bootstrap failed:', err);

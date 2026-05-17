@@ -104,7 +104,7 @@ projects:
     number: "02"
     line1: "SELECTED"
     line2: "PROJECTS"
-    stroke_line: 2  # Which line gets the stroke effect (1-indexed)
+    stroke_line: 2
   debris:
     - content: "PRJ"
     - content: "0x3F"
@@ -234,19 +234,6 @@ contact:
     - label: "LINKEDIN::"
       url: "#"
       value: "linkedin.com/in/ibrahim-f1"
-  form:
-    fields:
-      - name: "NAME_"
-        type: "text"
-        placeholder: "enter name..."
-      - name: "EMAIL_"
-        type: "email"
-        placeholder: "enter email..."
-      - name: "MESSAGE_"
-        type: "textarea"
-        placeholder: "enter message..."
-        rows: 6
-    submit_text: "TRANSMIT →"
   debris:
     - content: "}"
     - content: ":://"

@@ -1,0 +1,243 @@
+# ============================================================
+# PORTFOLIO://ENGINEER — CENTRALIZED DATA SOURCE
+# Single source of truth for all site content.
+# Add/remove entries freely — the UI scales automatically.
+# ============================================================
+
+site:
+  title: "PORTFOLIO://ENGINEER"
+  description: "Portfolio of John Doe — Software engineer specializing in distributed systems, low-level architecture, and interfaces that push boundaries."
+  version: "1.0.0"
+  theme_color: "#0a0a0a"
+
+# ---- NAVIGATION ----
+# Each item becomes a nav link. The `id` must match a section id.
+nav:
+  - id: "hero"
+    label: "00_HOME"
+    data_section: "00"
+  - id: "about"
+    label: "01_ABOUT"
+    data_section: "01"
+  - id: "projects"
+    label: "02_PROJECTS"
+    data_section: "02"
+  - id: "experience"
+    label: "03_EXP"
+    data_section: "03"
+  - id: "contact"
+    label: "04_CONTACT"
+    data_section: "04"
+
+# ---- HERO SECTION ----
+hero:
+  bg_text: "ENGINEER"
+  tags:
+    top: "SOFTWARE"
+    bottom: "& SYSTEMS"
+  name:
+    line1: "JOHN"
+    line2: "DOE"
+  debris:
+    - content: "///"
+    - content: "[>]"
+    - content: "{ }"
+    - content: "00"
+    - content: "</>"
+  brackets:
+    left: "["
+    right: "]"
+  social:
+    - platform: "github"
+      url: "https://github.com"
+      rotation: -8
+      float_class: "hero-social-float--github"
+      social_class: "hero-social--github"
+      aria_label: "GitHub"
+    - platform: "linkedin"
+      url: "https://linkedin.com"
+      rotation: 6
+      float_class: "hero-social-float--linkedin"
+      social_class: "hero-social--linkedin"
+      aria_label: "LinkedIn"
+  meta:
+    scroll_text: "SCROLL TO DECONSTRUCT"
+    scroll_indicator: "↓"
+
+# ---- ABOUT SECTION ----
+about:
+  number: "01"
+  heading:
+    - "I BUILD"
+    - "<span class=\"strike\">THINGS</span>"
+    - "SYSTEMS"
+  texts:
+    - >-
+      Software engineer specializing in distributed systems,
+      low-level architecture, and interfaces that feel like they
+      shouldn't work but do. I treat code as material — something
+      to bend, break, and reassemble.
+    - >-
+      Based in the space between hardware constraints and
+      user expectations. Comfortable with ambiguity.
+      Uncomfortable with mediocrity.
+  specs:
+    - label: "STACK::"
+      value: "Rust / TypeScript / Go / Python"
+    - label: "FOCUS::"
+      value: "Systems / Infrastructure / DX"
+    - label: "YRS::"
+      value: "6+ PRODUCTION"
+    - label: "STATUS::"
+      value: "OPEN TO WORK"
+  debris:
+    - content: "SYS"
+    - content: "0x4F"
+    - content: "::"
+
+# ---- PROJECTS SECTION ----
+projects:
+  bg_text: "WORK"
+  heading:
+    number: "02"
+    line1: "SELECTED"
+    line2: "PROJECTS"
+    stroke_line: 2  # Which line gets the stroke effect (1-indexed)
+  debris:
+    - content: "PRJ"
+    - content: "0x3F"
+    - content: "::"
+    - content: "//"
+  items:
+    - index: "01"
+      title_prefix: "NEXUS"
+      title_separator: "://"
+      title_suffix: "COMPUTE"
+      description: "Distributed compute platform handling 2M+ req/sec. Real-time data pipeline processing 500TB daily across 12 regions."
+      image_webp: "assets/projects/project1.png"
+      image_fallback: "assets/projects/project1.png"
+      image_alt: "Distributed compute platform"
+      tags:
+        - "Rust"
+        - "gRPC"
+        - "K8s"
+
+    - index: "02"
+      title_prefix: "VOID"
+      title_separator: "://"
+      title_suffix: "LANG"
+      description: "Compiler toolchain for domain-specific language. Plugin architecture adopted by 200+ teams. 73% faster builds."
+      image_webp: "assets/projects/project2.gif"
+      image_fallback: "assets/projects/project2.gif"
+      image_alt: "Compiler toolchain"
+      tags:
+        - "TypeScript"
+        - "Go"
+        - "LLVM"
+
+    - index: "03"
+      title_prefix: "FRAGMENT"
+      title_separator: "://"
+      title_suffix: "SYS"
+      description: "Observability platform for distributed tracing. Custom time-series DB with 10x compression. 50+ production services."
+      image_webp: "assets/projects/project3.jpeg"
+      image_fallback: "assets/projects/project3.jpeg"
+      image_alt: "Observability platform"
+      tags:
+        - "Python"
+        - "C++"
+        - "ClickHouse"
+
+# ---- EXPERIENCE SECTION ----
+experience:
+  items:
+    - index: "01"
+      period: "2022—PRESENT"
+      title: "SENIOR ENGINEER"
+      company: "NEXUS SYSTEMS"
+      description: >-
+        Architecting distributed compute platform handling 2M+
+        requests/sec. Led migration from monolith to microservices.
+        Built real-time data pipeline processing 500TB daily.
+      tags:
+        - "Rust"
+        - "gRPC"
+        - "K8s"
+        - "Kafka"
+
+    - index: "02"
+      period: "2020—2022"
+      title: "SOFTWARE ENGINEER"
+      company: "VOID PROTOCOL"
+      description: >-
+        Built compiler toolchain for domain-specific language.
+        Designed plugin architecture adopted by 200+ teams.
+        Reduced build times by 73% through incremental compilation.
+      tags:
+        - "TypeScript"
+        - "Go"
+        - "LLVM"
+        - "WASM"
+
+    - index: "03"
+      period: "2019—2020"
+      title: "ENGINEER I"
+      company: "FRAGMENT LABS"
+      description: >-
+        Developed observability platform for distributed tracing.
+        Implemented custom time-series database with 10x compression
+        ratio. Shipped monitoring to 50+ production services.
+      tags:
+        - "Python"
+        - "C++"
+        - "ClickHouse"
+        - "Grafana"
+
+    - index: "04"
+      period: "2018—2019"
+      title: "INTERN → JR ENGINEER"
+      company: "RASTER DIGITAL"
+      description: >-
+        Built internal CLI tools used by 100+ engineers.
+        Contributed to open-source graphics rendering library.
+        First production deploy within 2 weeks of starting.
+      tags:
+        - "Node.js"
+        - "OpenGL"
+        - "Docker"
+        - "CI/CD"
+
+  debris:
+    - content: "EXP"
+    - content: "0x2A"
+
+# ---- CONTACT SECTION ----
+contact:
+  heading:
+    line1: "LET'S"
+    line2: "BUILD"
+  sub_text: >-
+    Currently open to roles that push boundaries.
+    Preferably in systems, infrastructure, or tooling.
+  links:
+    - label: "EMAIL::"
+      url: "mailto:john@example.com"
+      value: "john@example.com"
+    - label: "GITHUB::"
+      url: "#"
+      value: "github.com/johndoe"
+    - label: "LINKEDIN::"
+      url: "#"
+      value: "linkedin.com/in/johndoe"
+  debris:
+    - content: "}"
+    - content: ":://"
+    - content: "[ ]"
+    - content: "→"
+    - content: "///"
+    - icon: "github"
+    - icon: "linkedin"
+  footer:
+    - "© 2026 — DESIGNED & ENGINEERED"
+    - "BUILT WITH RAW HTML/CSS/JS"
+    - "v1.0.0"
