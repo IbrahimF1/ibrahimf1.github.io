@@ -125,6 +125,11 @@ function generateHero(data) {
         <span class="hero-meta-line">${hero.meta.scroll_text}</span>
         <span class="hero-meta-line hero-scroll-indicator">${hero.meta.scroll_indicator}</span>
     `;
+
+    // Bottom glow element
+    const glow = document.createElement('div');
+    glow.className = 'hero-glow';
+    document.getElementById('hero').appendChild(glow);
 }
 
 function generateAbout(data) {
@@ -574,6 +579,9 @@ function initAnimations(data) {
 
         // Meta text fades
         heroTl.to('.hero-meta', { opacity: 0, y: m(50), duration: 0.5 }, 0);
+
+        // Bottom glow fades out
+        heroTl.to('.hero-glow', { opacity: 0, duration: 1 }, 0);
 
         // Hero social icon hover
         if (isDesktop && !reduceMotion) {

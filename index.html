@@ -430,6 +430,10 @@
             .hero-social-float--linkedin {
                 animation: none
             }
+
+            .hero-glow {
+                animation: none
+            }
         }
 
         @keyframes scroll-bounce {
@@ -442,6 +446,19 @@
             50% {
                 transform: translateY(8px)
             }
+        }
+
+        /* Hero bottom glow — teases next section */
+        .hero-glow {
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            width: 100%;
+            height: 220px;
+            background:
+                radial-gradient(ellipse 80% 100% at 50% 100%, rgba(212, 197, 171, 0.10) 0%, rgba(138, 127, 114, 0.05) 35%, transparent 70%);
+            pointer-events: none;
+            z-index: 9
         }
 
         /* Mobile hamburger — critical for first paint */
