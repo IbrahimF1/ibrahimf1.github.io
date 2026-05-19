@@ -130,6 +130,12 @@ function generateHero(data) {
     const glow = document.createElement('div');
     glow.className = 'hero-glow';
     document.getElementById('hero').appendChild(glow);
+
+    // Startup animation overlay
+    const overlay = document.createElement('div');
+    overlay.className = 'startup-overlay';
+    overlay.id = 'startupOverlay';
+    document.body.appendChild(overlay);
 }
 
 function generateAbout(data) {
@@ -1125,6 +1131,200 @@ function getContactDebrisParallaxAnim(index) {
     return patterns[(index - 1) % patterns.length];
 }
 
+// ---- STARTUP ANIMATION ----
+// Immersive center-expand reveal with flip-in hero elements
+function playStartupAnimation(data) {
+    const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    const overlay = document.getElementById('startupOverlay');
+
+    // If reduced motion, skip animation entirely
+    if (reduceMotion) {
+        if (overlay) overlay.remove();
+        return Promise.resolve();
+    }
+
+    return new Promise((resolve) => {
+        // ---- Collect all hero elements ----
+        const bgText = document.querySelector('.hero-bg-text');
+        const nameLine1 = document.querySelector('.hero-name-line[data-line="1"]');
+        const nameLine2 = document.querySelector('.hero-name-line[data-line="2"]');
+        const tagTop = document.querySelector('.hero-tag--top');
+        const tagBottom = document.querySelector('.hero-tag--bottom');
+        const bracketLeft = document.querySelector('.hero-bracket--left');
+        const bracketRight = document.querySelector('.hero-bracket--right');
+        const debris = document.querySelectorAll('.hero-debris');
+        const socialIcons = document.querySelectorAll('.hero-social');
+        const socialFloats = document.querySelectorAll('.hero-social-float');
+        const meta = document.querySelector('.hero-meta');
+        const glow = document.querySelector('.hero-glow');
+        const navBar = document.querySelector('.nav-bar');
+
+        // ---- Capture original CSS-defined values before any GSAP manipulation ----
+        const origTagTopX = tagTop ? gsap.getProperty(tagTop, 'x') : 0;
+        const origTagBottomX = tagBottom ? gsap.getProperty(tagBottom, 'x') : 0;
+        const origDebrisOpacity = Array.from(debris).map(d => parseFloat(gsap.getProperty(d, 'opacity')));
+        const origSocialRotation = Array.from(socialIcons).map(s => parseFloat(gsap.getProperty(s, 'rotation')));
+        const origSocialOpacity = Array.from(socialIcons).map(s => parseFloat(gsap.getProperty(s, 'opacity')));
+
+        // ---- Set initial hidden states ----
+        gsap.set(bgText, { scale: 0.2, opacity: 0, transformOrigin: 'center center' });
+        gsap.set(nameLine1, { rotateX: -90, scale: 0.4, opacity: 0, transformOrigin: 'center center', transformPerspective: 800 });
+        gsap.set(nameLine2, { rotateX: 90, scale: 0.4, opacity: 0, transformOrigin: 'center center', transformPerspective: 800 });
+        gsap.set(tagTop, { rotateY: -80, x: 0, opacity: 0, transformOrigin: 'center center', transformPerspective: 600 });
+        gsap.set(tagBottom, { rotateY: 80, x: 0, opacity: 0, transformOrigin: 'center center', transformPerspective: 600 });
+        gsap.set(bracketLeft, { rotateY: 70, opacity: 0, transformOrigin: 'center center', transformPerspective: 600 });
+        gsap.set(bracketRight, { rotateY: -70, opacity: 0, transformOrigin: 'center center', transformPerspective: 600 });
+        gsap.set(debris, {
+            rotateY: (i) => (i % 2 === 0 ? 90 : -90),
+            scale: 0.3,
+            opacity: 0,
+            transformOrigin: 'center center',
+            transformPerspective: 500
+        });
+        gsap.set(socialIcons, {
+            rotateY: (i) => (i % 2 === 0 ? 100 : -100),
+            scale: 0.3,
+            opacity: 0,
+            transformOrigin: 'center center',
+            transformPerspective: 500
+        });
+        gsap.set(socialFloats, { opacity: 0 });
+        gsap.set(meta, { y: 30, opacity: 0 });
+        gsap.set(glow, { opacity: 0 });
+        gsap.set(navBar, { y: -60, opacity: 0 });
+
+        // ---- Build the timeline ----
+        const tl = gsap.timeline({
+            onComplete: () => {
+                // Clear all inline styles so CSS takes over for scroll animations
+                const elementsToClear = [bgText, nameLine1, nameLine2, tagTop, tagBottom,
+                    bracketLeft, bracketRight, ...debris, ...socialIcons, ...socialFloats, meta, glow, navBar]
+                    .filter(Boolean);
+                gsap.set(elementsToClear, { clearProps: 'all' });
+
+                if (overlay) overlay.remove();
+                resolve();
+            }
+        });
+
+        // ---- Phase 1: Overlay expands from center ----
+        tl.to(overlay, {
+            scale: 3,
+            opacity: 0,
+            duration: 1.4,
+            ease: 'power3.inOut'
+        }, 0);
+
+        // ---- Phase 2: Background text scales in from center ----
+        tl.to(bgText, {
+            scale: 1,
+            opacity: 1,
+            duration: 1.4,
+            ease: 'power3.out'
+        }, 0.5);
+
+        // ---- Phase 3: Name lines flip in from center ----
+        tl.to(nameLine1, {
+            rotateX: 0,
+            scale: 1,
+            opacity: 1,
+            duration: 0.9,
+            ease: 'back.out(1.4)'
+        }, 0.8);
+
+        tl.to(nameLine2, {
+            rotateX: 0,
+            scale: 1,
+            opacity: 1,
+            duration: 0.9,
+            ease: 'back.out(1.4)'
+        }, 0.95);
+
+        // ---- Phase 4: Tags flip in to their original CSS positions ----
+        tl.to(tagTop, {
+            rotateY: 0,
+            x: origTagTopX,
+            opacity: 1,
+            duration: 0.8,
+            ease: 'back.out(1.2)'
+        }, 1.1);
+
+        tl.to(tagBottom, {
+            rotateY: 0,
+            x: origTagBottomX,
+            opacity: 1,
+            duration: 0.8,
+            ease: 'back.out(1.2)'
+        }, 1.2);
+
+        // ---- Phase 5: Brackets flip outward ----
+        tl.to(bracketLeft, {
+            rotateY: 0,
+            opacity: 0.3,
+            duration: 0.7,
+            ease: 'power3.out'
+        }, 1.2);
+
+        tl.to(bracketRight, {
+            rotateY: 0,
+            opacity: 0.3,
+            duration: 0.7,
+            ease: 'power3.out'
+        }, 1.3);
+
+        // ---- Phase 6: Debris stagger flip in to original opacities ----
+        tl.to(debris, {
+            rotateY: 0,
+            scale: 1,
+            opacity: (i) => origDebrisOpacity[i],
+            duration: 0.5,
+            ease: 'back.out(1.5)',
+            stagger: 0.07
+        }, 1.3);
+
+        // ---- Phase 7: Social icons flip in to original rotations/opacities ----
+        tl.to(socialIcons, {
+            rotateY: 0,
+            rotation: (i) => origSocialRotation[i],
+            scale: 1,
+            opacity: (i) => origSocialOpacity[i],
+            duration: 0.6,
+            ease: 'back.out(1.3)',
+            stagger: 0.1
+        }, 1.5);
+
+        // Social float containers fade in
+        tl.to(socialFloats, {
+            opacity: 1,
+            duration: 0.4,
+            stagger: 0.1
+        }, 1.5);
+
+        // ---- Phase 8: Nav bar slides down ----
+        tl.to(navBar, {
+            y: 0,
+            opacity: 1,
+            duration: 0.6,
+            ease: 'power3.out'
+        }, 1.4);
+
+        // ---- Phase 9: Meta text fades up ----
+        tl.to(meta, {
+            y: 0,
+            opacity: 1,
+            duration: 0.6,
+            ease: 'power2.out'
+        }, 1.8);
+
+        // ---- Phase 10: Bottom glow fades in ----
+        tl.to(glow, {
+            opacity: 1,
+            duration: 1.2,
+            ease: 'power2.inOut'
+        }, 2.4);
+    });
+}
+
 // ---- REFRESH SCROLLTRIGGER ON RESIZE ----
 let resizeTimer;
 window.addEventListener('resize', () => {
@@ -1159,8 +1359,10 @@ window.addEventListener('resize', () => {
             generateExperience(data);
             generateContact(data);
 
-            // Initialize animations after DOM is populated
-            initAnimations(data);
+            // Play startup animation, then initialize scroll animations
+            playStartupAnimation(data).then(() => {
+                initAnimations(data);
+            });
         })
         .catch(err => {
             console.error('Portfolio bootstrap failed:', err);

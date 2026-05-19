@@ -216,6 +216,21 @@ a:hover {
 }
 
 /* ================================================================
+   STARTUP ANIMATION OVERLAY
+   ================================================================ */
+.startup-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: var(--bg);
+    z-index: 9998;
+    pointer-events: none;
+    will-change: transform, opacity;
+}
+
+/* ================================================================
    HERO SECTION
    ================================================================ */
 .hero-section {
@@ -234,6 +249,7 @@ a:hover {
     display: flex;
     justify-content: center;
     align-items: center;
+    perspective: 1200px;
 }
 
 .hero-layer {
@@ -2053,6 +2069,10 @@ a:hover {
    REDUCED MOTION — Disable immersive animations
    ================================================================ */
 @media (prefers-reduced-motion: reduce) {
+    .startup-overlay {
+        display: none !important;
+    }
+
     .hero-glow {
         animation: none;
     }
