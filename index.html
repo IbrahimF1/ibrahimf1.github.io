@@ -109,7 +109,8 @@
             pointer-events: none;
             z-index: 10001;
             transform: translate(-50%, -50%);
-            mix-blend-mode: difference
+            mix-blend-mode: difference;
+            opacity: 0
         }
 
         .cursor-ring {
@@ -121,7 +122,8 @@
             pointer-events: none;
             z-index: 10000;
             transform: translate(-50%, -50%);
-            will-change: transform, width, height
+            will-change: transform, width, height;
+            opacity: 0
         }
 
         @media (hover: none), (pointer: coarse) {

@@ -113,6 +113,7 @@ a:hover {
     z-index: 10001;
     transform: translate(-50%, -50%);
     mix-blend-mode: difference;
+    opacity: 0;
 }
 
 .cursor-ring {
@@ -126,6 +127,7 @@ a:hover {
     transform: translate(-50%, -50%);
     will-change: transform, width, height;
     /* Width/height/borderColor transitions handled by GSAP for smooth easing */
+    opacity: 0;
 }
 
 /* Hide custom cursor on touch/mobile devices */

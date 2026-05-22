@@ -368,18 +368,17 @@ function generateContact(data) {
     });
 }
 
-// ---- ANIMATION INITIALIZATION ----
+// ---- CURSOR INITIALIZATION (runs before startup animation) ----
 
-function initAnimations(data) {
+function initCursor() {
     gsap.registerPlugin(ScrollTrigger, ScrollToPlugin);
 
-    // ---- CUSTOM CURSOR ----
     const isTouchDevice = window.matchMedia('(hover: none), (pointer: coarse)').matches;
     const cursorDot = document.querySelector('.cursor-dot');
     const cursorRing = document.querySelector('.cursor-ring');
 
     if (!isTouchDevice && cursorDot && cursorRing) {
-        let mouseX = 0, mouseY = 0;
+        let cursorRevealed = false;
 
         const dotXTo = gsap.quickTo(cursorDot, 'x', { duration: 0.1, ease: 'power2.out' });
         const dotYTo = gsap.quickTo(cursorDot, 'y', { duration: 0.1, ease: 'power2.out' });
@@ -387,14 +386,34 @@ function initAnimations(data) {
         const ringYTo = gsap.quickTo(cursorRing, 'y', { duration: 0.35, ease: 'power2.out' });
 
         document.addEventListener('mousemove', (e) => {
-            mouseX = e.clientX;
-            mouseY = e.clientY;
-            dotXTo(mouseX);
-            dotYTo(mouseY);
-            ringXTo(mouseX);
-            ringYTo(mouseY);
-        });
+            const mx = e.clientX;
+            const my = e.clientY;
 
+            // On first move: instantly teleport to cursor position, then reveal
+            if (!cursorRevealed) {
+                cursorRevealed = true;
+                gsap.set(cursorDot, { x: mx, y: my, opacity: 1 });
+                gsap.set(cursorRing, { x: mx, y: my, opacity: 1 });
+                return;
+            }
+
+            dotXTo(mx);
+            dotYTo(my);
+            ringXTo(mx);
+            ringYTo(my);
+        });
+    }
+}
+
+// ---- ANIMATION INITIALIZATION ----
+
+function initAnimations(data) {
+    // ---- CUSTOM CURSOR HOVER EFFECTS ----
+    const isTouchDevice = window.matchMedia('(hover: none), (pointer: coarse)').matches;
+    const cursorDot = document.querySelector('.cursor-dot');
+    const cursorRing = document.querySelector('.cursor-ring');
+
+    if (!isTouchDevice && cursorDot && cursorRing) {
         document.querySelectorAll('a, button, .exp-card, .project-card').forEach(el => {
             el.addEventListener('mouseenter', () => {
                 gsap.to(cursorRing, { width: 60, height: 60, borderColor: 'var(--fg-bright)', duration: 0.2, ease: 'power2.out' });
@@ -1143,13 +1162,9 @@ function playStartupAnimation(data) {
         return Promise.resolve();
     }
 
-    // ---- Lock scroll and hide custom cursor during animation ----
+    // ---- Lock scroll during animation ----
     document.documentElement.style.overflow = 'hidden';
     document.body.style.overflow = 'hidden';
-    const cursorDot = document.querySelector('.cursor-dot');
-    const cursorRing = document.querySelector('.cursor-ring');
-    if (cursorDot) gsap.set(cursorDot, { opacity: 0 });
-    if (cursorRing) gsap.set(cursorRing, { opacity: 0 });
 
     return new Promise((resolve) => {
         // ---- Collect all hero elements ----
@@ -1210,11 +1225,9 @@ function playStartupAnimation(data) {
                     .filter(Boolean);
                 gsap.set(elementsToClear, { clearProps: 'all' });
 
-                // ---- Unlock scroll and restore custom cursor ----
+                // ---- Unlock scroll ----
                 document.documentElement.style.overflow = '';
                 document.body.style.overflow = '';
-                if (cursorDot) gsap.set(cursorDot, { clearProps: 'all' });
-                if (cursorRing) gsap.set(cursorRing, { clearProps: 'all' });
 
                 if (overlay) overlay.remove();
                 resolve();
@@ -1372,6 +1385,9 @@ window.addEventListener('resize', () => {
             generateProjects(data);
             generateExperience(data);
             generateContact(data);
+
+            // Initialize cursor tracking immediately (before startup animation)
+            initCursor();
 
             // Play startup animation, then initialize scroll animations
             playStartupAnimation(data).then(() => {
