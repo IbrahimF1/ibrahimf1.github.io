@@ -1143,6 +1143,14 @@ function playStartupAnimation(data) {
         return Promise.resolve();
     }
 
+    // ---- Lock scroll and hide custom cursor during animation ----
+    document.documentElement.style.overflow = 'hidden';
+    document.body.style.overflow = 'hidden';
+    const cursorDot = document.querySelector('.cursor-dot');
+    const cursorRing = document.querySelector('.cursor-ring');
+    if (cursorDot) gsap.set(cursorDot, { opacity: 0 });
+    if (cursorRing) gsap.set(cursorRing, { opacity: 0 });
+
     return new Promise((resolve) => {
         // ---- Collect all hero elements ----
         const bgText = document.querySelector('.hero-bg-text');
@@ -1201,6 +1209,12 @@ function playStartupAnimation(data) {
                     bracketLeft, bracketRight, ...debris, ...socialIcons, ...socialFloats, meta, glow, navBar]
                     .filter(Boolean);
                 gsap.set(elementsToClear, { clearProps: 'all' });
+
+                // ---- Unlock scroll and restore custom cursor ----
+                document.documentElement.style.overflow = '';
+                document.body.style.overflow = '';
+                if (cursorDot) gsap.set(cursorDot, { clearProps: 'all' });
+                if (cursorRing) gsap.set(cursorRing, { clearProps: 'all' });
 
                 if (overlay) overlay.remove();
                 resolve();
