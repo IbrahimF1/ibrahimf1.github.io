@@ -776,6 +776,40 @@ a:hover {
     color: var(--fg);
 }
 
+/* GitHub repo link — anti-design corner clip */
+.project-card-repo {
+    position: absolute;
+    bottom: -15px;
+    right: -15px;
+    z-index: 5;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 140px;
+    height: 140px;
+    color: var(--fg-dim);
+    opacity: 0.25;
+    transition: opacity 0.3s ease-out, color var(--transition-raw);
+    text-decoration: none;
+    pointer-events: auto;
+}
+
+.project-card-repo svg {
+    width: 140px;
+    height: 140px;
+    fill: none;
+    stroke: currentColor;
+}
+
+.project-card:hover .project-card-repo {
+    opacity: 0.6;
+}
+
+.project-card-repo:hover {
+    color: var(--highlight);
+    opacity: 1 !important;
+}
+
 /* Card index watermark — large, behind everything */
 .project-card-index {
     position: absolute;

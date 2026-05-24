@@ -117,6 +117,7 @@ projects:
       image_webp: "assets/projects/project1.png"
       image_fallback: "assets/projects/project1.png"
       image_alt: "Distributed compute platform"
+      repo_url: "https://github.com"
       tags:
         - "Rust"
         - "gRPC"
@@ -130,6 +131,7 @@ projects:
       image_webp: "assets/projects/project2.gif"
       image_fallback: "assets/projects/project2.gif"
       image_alt: "Compiler toolchain"
+      repo_url: "https://github.com"
       tags:
         - "TypeScript"
         - "Go"
@@ -143,6 +145,7 @@ projects:
       image_webp: "assets/projects/project3.jpeg"
       image_fallback: "assets/projects/project3.jpeg"
       image_alt: "Observability platform"
+      repo_url: "https://github.com"
       tags:
         - "Python"
         - "C++"

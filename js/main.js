@@ -7,6 +7,7 @@
 // ---- SVG ICON TEMPLATES ----
 const SVG_ICONS = {
     github: '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor"><polygon points="23 9 23 15 22 15 22 17 21 17 21 19 20 19 20 20 19 20 19 21 18 21 18 22 16 22 16 23 15 23 15 18 14 18 14 17 15 17 15 16 17 16 17 15 18 15 18 14 19 14 19 9 18 9 18 6 16 6 16 7 15 7 15 8 14 8 14 7 10 7 10 8 9 8 9 7 8 7 8 6 6 6 6 9 5 9 5 14 6 14 6 15 7 15 7 16 9 16 9 18 7 18 7 17 6 17 6 16 4 16 4 17 5 17 5 19 6 19 6 20 9 20 9 23 8 23 8 22 6 22 6 21 5 21 5 20 4 20 4 19 3 19 3 17 2 17 2 15 1 15 1 9 2 9 2 7 3 7 3 5 4 5 4 4 5 4 5 3 7 3 7 2 9 2 9 1 15 1 15 2 17 2 17 3 19 3 19 4 20 4 20 5 21 5 21 7 22 7 22 9 23 9" /></svg>',
+    github_outlined: '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="0.5" stroke-linejoin="round"><polygon points="23 9 23 15 22 15 22 17 21 17 21 19 20 19 20 20 19 20 19 21 18 21 18 22 16 22 16 23 15 23 15 18 14 18 14 17 15 17 15 16 17 16 17 15 18 15 18 14 19 14 19 9 18 9 18 6 16 6 16 7 15 7 15 8 14 8 14 7 10 7 10 8 9 8 9 7 8 7 8 6 6 6 6 9 5 9 5 14 6 14 6 15 7 15 7 16 9 16 9 18 7 18 7 17 6 17 6 16 4 16 4 17 5 17 5 19 6 19 6 20 9 20 9 23 8 23 8 22 6 22 6 21 5 21 5 20 4 20 4 19 3 19 3 17 2 17 2 15 1 15 1 9 2 9 2 7 3 7 3 5 4 5 4 4 5 4 5 3 7 3 7 2 9 2 9 1 15 1 15 2 17 2 17 3 19 3 19 4 20 4 20 5 21 5 21 7 22 7 22 9 23 9" /></svg>',
     linkedin: '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor"><path d="m22,2v-1H2v1h-1v20h1v1h20v-1h1V2h-1Zm-9,10v8h-3v-11h3v1h1v-1h4v1h1v10h-3v-8h-3Zm-9-4v-3h3v3h-3Zm3,1v11h-3v-11h3Z" /></svg>'
 };
 
@@ -206,6 +207,10 @@ function generateProjects(data) {
 
         const tagsHtml = project.tags.map(t => `<span class="project-tag">${t}</span>`).join('');
 
+        const repoLinkHtml = project.repo_url
+            ? `<a href="${project.repo_url}" target="_blank" rel="noopener noreferrer" class="project-card-repo" aria-label="View source on GitHub">${SVG_ICONS.github_outlined}</a>`
+            : '';
+
         card.innerHTML = `
             <div class="project-card-image">
                 <picture>
@@ -213,6 +218,7 @@ function generateProjects(data) {
                     <img src="${project.image_fallback}" alt="${project.image_alt}" loading="lazy">
                 </picture>
             </div>
+            ${repoLinkHtml}
             <div class="project-card-overlay">
                 <div class="project-card-number">${project.index}</div>
                 <h3 class="project-card-title">${project.title_prefix}<span class="project-card-title-accent">${project.title_separator}</span>${project.title_suffix}</h3>
