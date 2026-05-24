@@ -689,7 +689,7 @@ function initAnimations(data) {
             }
         }
 
-        // ---- PROJECTS: DYNAMIC CARD ANIMATIONS ----
+        // ---- PROJECTS: STORY-BASED IMMERSIVE CARD ANIMATIONS ----
         gsap.set('.projects-heading-block', { y: isMobile ? 30 : 60, autoAlpha: 0 });
 
         gsap.timeline({
@@ -701,11 +701,48 @@ function initAnimations(data) {
             }
         }).to('.projects-heading-block', { y: 0, autoAlpha: 1, duration: 0.25 });
 
-        // Dynamic per-card exit animations — cycles through 3 patterns
         const projectCards = document.querySelectorAll('.project-card');
+        const totalCards = projectCards.length;
+
+        // --- Entrance: cards fly in from the opposite direction of their exit ---
+        // Even cards (0, 2...) will exit right → they enter from the left
+        // Odd cards (1, 3...) will exit left → they enter from the right
+        // Last card exits up → it enters from below
         projectCards.forEach((card, i) => {
-            const patternIndex = i % 3;
-            const keyframes = getProjectExitKeyframes(patternIndex, isMobile);
+            const isLast = i === totalCards - 1;
+            if (isLast) {
+                // Last card enters from below (will exit up — the finale)
+                gsap.set(card, { y: m(100), autoAlpha: 0 });
+            } else if (i % 2 === 0) {
+                // Even cards enter from left (will sweep out right)
+                gsap.set(card, { x: m(-250), autoAlpha: 0 });
+            } else {
+                // Odd cards enter from right (will sweep out left)
+                gsap.set(card, { x: m(250), autoAlpha: 0 });
+            }
+        });
+
+        // Staggered entrance timeline — cards fly in sequentially as section scrolls into view
+        const projectsEnterTl = gsap.timeline({
+            scrollTrigger: {
+                trigger: '#projects',
+                start: 'top 55%',
+                end: 'top 10%',
+                scrub: 1.5
+            }
+        });
+
+        projectCards.forEach((card, i) => {
+            projectsEnterTl.to(card, {
+                x: 0, y: 0, autoAlpha: 1,
+                duration: 0.25,
+                ease: 'power2.out'
+            }, i * 0.15);
+        });
+
+        // --- Exit: alternating right, left, right... last card fades out up ---
+        projectCards.forEach((card, i) => {
+            const keyframes = getProjectExitKeyframes(i, totalCards, isMobile);
 
             const tl = gsap.timeline({
                 scrollTrigger: {
@@ -1100,34 +1137,42 @@ function getExpDebrisAnim(index) {
     return patterns[(index - 1) % patterns.length];
 }
 
-function getProjectExitKeyframes(patternIndex, isMobile) {
-    const patterns = [
-        // Pattern 0: fly right-up with 3D
-        isMobile ? [
-            { y: -30, skewX: 5, autoAlpha: 0.8, duration: 0.4 },
-            { x: 80, y: -60, skewX: 8, autoAlpha: 0, duration: 0.6 }
+function getProjectExitKeyframes(cardIndex, totalCards, isMobile) {
+    const isLast = cardIndex === totalCards - 1;
+
+    if (isLast) {
+        // Last card: dramatic fade out UP — the grand finale
+        return isMobile ? [
+            { y: -30, scale: 0.98, autoAlpha: 0.8, duration: 0.4 },
+            { y: -120, scale: 0.92, autoAlpha: 0, duration: 0.6 }
         ] : [
-            { y: -60, rotateY: 15, rotateX: -5, skewX: 10, scale: 0.95, autoAlpha: 0.8, duration: 0.4 },
-            { x: 200, y: -150, rotateY: 45, rotateX: -20, scale: 0.7, skewX: 15, autoAlpha: 0, duration: 0.6 }
-        ],
-        // Pattern 1: fly left with rotation
-        isMobile ? [
-            { x: -60, y: -20, rotation: -4, autoAlpha: 0.7, duration: 0.5 },
-            { x: -100, y: -40, rotation: -8, autoAlpha: 0, duration: 0.5 }
+            { y: -60, scale: 0.98, skewX: 2, autoAlpha: 0.7, duration: 0.3 },
+            { y: -220, scale: 0.82, skewX: -3, autoAlpha: 0, duration: 0.7 }
+        ];
+    }
+
+    // Alternate directions: even cards → right, odd cards → left
+    const goesRight = cardIndex % 2 === 0;
+
+    if (goesRight) {
+        // Fade out RIGHT — cinematic sweep with 3D rotation
+        return isMobile ? [
+            { x: 40, y: -15, autoAlpha: 0.7, duration: 0.35 },
+            { x: 150, y: -40, autoAlpha: 0, duration: 0.65 }
         ] : [
-            { x: -250, y: -40, rotation: -8, skewX: -5, autoAlpha: 0.7, duration: 0.5 },
-            { x: -350, y: -80, rotation: -15, scale: 0.9, autoAlpha: 0, duration: 0.5 }
-        ],
-        // Pattern 2: fly up with subtle rotation
-        isMobile ? [
-            { y: -50, rotation: 2, autoAlpha: 0.7, duration: 0.5 },
-            { y: -100, rotation: -1, autoAlpha: 0, duration: 0.5 }
+            { x: 60, y: -20, rotateY: 8, skewX: 4, scale: 0.98, autoAlpha: 0.7, duration: 0.3 },
+            { x: 350, y: -80, rotateY: 30, skewX: 10, scale: 0.78, autoAlpha: 0, duration: 0.7 }
+        ];
+    } else {
+        // Fade out LEFT — cinematic sweep with 3D rotation
+        return isMobile ? [
+            { x: -40, y: -15, autoAlpha: 0.7, duration: 0.35 },
+            { x: -150, y: -40, autoAlpha: 0, duration: 0.65 }
         ] : [
-            { y: -100, rotation: 3, skewX: 4, autoAlpha: 0.7, duration: 0.5 },
-            { y: -200, rotation: -2, scale: 1.05, skewX: 0, autoAlpha: 0, duration: 0.5 }
-        ]
-    ];
-    return patterns[patternIndex];
+            { x: -60, y: -20, rotateY: -8, skewX: -4, scale: 0.98, autoAlpha: 0.7, duration: 0.3 },
+            { x: -350, y: -80, rotateY: -30, skewX: -10, scale: 0.78, autoAlpha: 0, duration: 0.7 }
+        ];
+    }
 }
 
 function getContactDebrisEntryAnim(index) {
