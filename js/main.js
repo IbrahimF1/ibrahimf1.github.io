@@ -1161,10 +1161,12 @@ function getContactDebrisParallaxAnim(index) {
 function playStartupAnimation(data) {
     const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
     const overlay = document.getElementById('startupOverlay');
+    const hasVisited = localStorage.getItem('portfolio_visited') === 'true';
 
-    // If reduced motion, skip animation entirely
-    if (reduceMotion) {
+    // If reduced motion or returning visitor, skip animation entirely
+    if (reduceMotion || hasVisited) {
         if (overlay) overlay.remove();
+        if (!hasVisited) localStorage.setItem('portfolio_visited', 'true');
         return Promise.resolve();
     }
 
@@ -1234,6 +1236,9 @@ function playStartupAnimation(data) {
                 // ---- Unlock scroll ----
                 document.documentElement.style.overflow = '';
                 document.body.style.overflow = '';
+
+                // Mark as visited so animation is skipped on return visits
+                localStorage.setItem('portfolio_visited', 'true');
 
                 if (overlay) overlay.remove();
                 resolve();
