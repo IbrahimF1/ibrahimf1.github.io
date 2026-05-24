@@ -685,14 +685,16 @@ a:hover {
     height: 100%;
     object-fit: cover;
     filter: grayscale(80%) contrast(1.1) brightness(0.7);
-    transition: filter 0.3s ease-out, transform 0.4s ease-out;
+    /* Use standalone 'scale' property instead of 'transform: scale()'
+       to avoid overwriting GSAP's inline transform (parallax y-offset) */
+    transition: filter 0.3s ease-out, scale 0.4s ease-out;
     will-change: transform, filter;
 }
 
 
 .project-card:hover .project-card-image img {
     filter: grayscale(40%) contrast(1.2) brightness(0.8);
-    transform: scale(1.05);
+    scale: 1.05;
 }
 
 /* Overlay with project info — sits on top of image */

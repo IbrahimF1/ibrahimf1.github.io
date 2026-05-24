@@ -615,14 +615,11 @@ function initAnimations(data) {
         heroTl.to('.hero-glow', { opacity: 0, duration: 1 }, 0);
 
         // Hero social icon hover
+        // Only animates scale to avoid conflicting with scroll-driven rotation/opacity/x/y
         if (isDesktop && !reduceMotion) {
             document.querySelectorAll('.hero-social').forEach(icon => {
-                const baseRotation = icon.classList.contains('hero-social--github') ? -8 : 6;
-
                 icon.addEventListener('mouseenter', () => {
                     gsap.to(icon, {
-                        opacity: 1,
-                        rotation: 0,
                         scale: 1.25,
                         duration: 0.2,
                         ease: 'power2.out',
@@ -632,8 +629,6 @@ function initAnimations(data) {
 
                 icon.addEventListener('mouseleave', () => {
                     gsap.to(icon, {
-                        opacity: 0.6,
-                        rotation: baseRotation,
                         scale: 1,
                         duration: 0.3,
                         ease: 'power2.inOut',
@@ -783,13 +778,17 @@ function initAnimations(data) {
         }
 
         // Project card hover micro-interactions
+        // Applied to .project-card-overlay (not the card itself) to avoid
+        // conflicting with scroll-driven y/x/rotation/skew animations on .project-card
         if (isDesktop) {
             document.querySelectorAll('.project-card').forEach(card => {
+                const overlay = card.querySelector('.project-card-overlay');
+                if (!overlay) return;
                 card.addEventListener('mouseenter', () => {
-                    gsap.to(card, { y: -4, duration: 0.2, ease: 'power2.out', overwrite: 'auto' });
+                    gsap.to(overlay, { y: -4, duration: 0.2, ease: 'power2.out', overwrite: 'auto' });
                 });
                 card.addEventListener('mouseleave', () => {
-                    gsap.to(card, { y: 0, duration: 0.3, ease: 'power2.inOut', overwrite: 'auto' });
+                    gsap.to(overlay, { y: 0, duration: 0.3, ease: 'power2.inOut', overwrite: 'auto' });
                 });
             });
         }
@@ -891,18 +890,19 @@ function initAnimations(data) {
         }
 
         // Experience hover micro-interactions
+        // overwrite: 'auto' prevents hover tweens from killing scroll-driven x/opacity tweens
         if (isDesktop) {
             document.querySelectorAll('.exp-card').forEach(card => {
                 const inner = card.querySelector('.exp-card-inner');
 
                 card.addEventListener('mouseenter', () => {
-                    gsap.to(inner, { y: -4, duration: 0.2, ease: 'power2.out' });
-                    gsap.to(card, { y: -2, duration: 0.2, ease: 'power2.out' });
+                    gsap.to(inner, { y: -4, duration: 0.2, ease: 'power2.out', overwrite: 'auto' });
+                    gsap.to(card, { y: -2, duration: 0.2, ease: 'power2.out', overwrite: 'auto' });
                 });
 
                 card.addEventListener('mouseleave', () => {
-                    gsap.to(inner, { y: 0, duration: 0.3, ease: 'power2.inOut' });
-                    gsap.to(card, { y: 0, duration: 0.3, ease: 'power2.inOut' });
+                    gsap.to(inner, { y: 0, duration: 0.3, ease: 'power2.inOut', overwrite: 'auto' });
+                    gsap.to(card, { y: 0, duration: 0.3, ease: 'power2.inOut', overwrite: 'auto' });
                 });
             });
         }
