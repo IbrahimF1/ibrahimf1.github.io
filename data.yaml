@@ -119,7 +119,7 @@ projects:
       image_webp: "assets/projects/project1.png"
       image_fallback: "assets/projects/project1.png"
       image_alt: "Interactive storytelling app"
-      repo_url: "https://github.com"
+      repo_url: "https://github.com/KeiraJames/nyu-hacks"
       tags:
         - "HTML5"
         - "CSS3"
@@ -135,7 +135,7 @@ projects:
       image_webp: "assets/projects/project2.gif"
       image_fallback: "assets/projects/project2.gif"
       image_alt: "3D forensic analysis platform"
-      repo_url: "https://github.com"
+      repo_url: "https://github.com/bshiribaiev/scene-splat"
       tags:
         - "TypeScript"
         - "React"
@@ -151,7 +151,7 @@ projects:
       image_webp: "assets/projects/project3.jpeg"
       image_fallback: "assets/projects/project3.jpeg"
       image_alt: "IoT heatstroke alert system"
-      repo_url: "https://github.com"
+      repo_url: "https://github.com/KeiraJames/Heat-Aware"
       tags:
         - "Python"
         - "Node.js"
