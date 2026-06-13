@@ -51,6 +51,18 @@ body {
     line-height: 1.6;
     overflow-x: hidden;
     cursor: none;
+    position: relative;
+}
+
+/* ---- BAYER DITHERING BACKGROUND ---- */
+#bayer-bg {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    z-index: 0;
+    pointer-events: none;
 }
 
 a {
