@@ -1089,6 +1089,102 @@ function initAnimations(data) {
             }
         });
 
+        // ---- BAYER DITHER BACKGROUND SYNCHRONIZATION ----
+        // Feed scroll-driven section progress to the dither background
+        // so it morphs its pattern, color, and density per section.
+        if (window.bayerBg) {
+            // Section progress tracker — maps scroll position to a continuous
+            // 0–N value that the dither shader uses for section-aware blending
+            const sectionIds = ['hero', 'about', 'projects', 'experience', 'contact'];
+            const sectionEls = sectionIds.map(id => document.getElementById(id)).filter(Boolean);
+
+            if (sectionEls.length > 0) {
+                ScrollTrigger.create({
+                    trigger: 'body',
+                    start: 'top top',
+                    end: 'bottom bottom',
+                    onUpdate: (self) => {
+                        // Map scroll position to continuous section progress
+                        const scrollY = window.scrollY || 0;
+                        const totalScroll = document.documentElement.scrollHeight - window.innerHeight;
+
+                        if (totalScroll <= 0) return;
+
+                        const scrollNorm = scrollY / totalScroll;
+                        const progress = scrollNorm * sectionEls.length;
+
+                        // Push to dither background for section-aware morphing
+                        window.bayerBg.setSectionProgress(progress);
+                    }
+                });
+            }
+
+            // Scroll velocity tracker — feeds GSAP's velocity to the dither
+            // for reactive pattern morphing during fast scrolling
+            ScrollTrigger.create({
+                trigger: 'body',
+                start: 'top top',
+                end: 'bottom bottom',
+                onUpdate: (self) => {
+                    const velocity = Math.abs(self.getVelocity()) / 5000;
+                    window.bayerBg.setScrollVelocity(Math.min(velocity, 1));
+                }
+            });
+
+            // Interactive element synchronization — boost dither glow on hover
+            if (isDesktop) {
+                // Project cards
+                document.querySelectorAll('.project-card').forEach(card => {
+                    card.addEventListener('mouseenter', () => {
+                        window.bayerBg.setInteractive(0.6);
+                    });
+                    card.addEventListener('mouseleave', () => {
+                        window.bayerBg.setInteractive(0);
+                    });
+                });
+
+                // Experience cards
+                document.querySelectorAll('.exp-card').forEach(card => {
+                    card.addEventListener('mouseenter', () => {
+                        window.bayerBg.setInteractive(0.5);
+                    });
+                    card.addEventListener('mouseleave', () => {
+                        window.bayerBg.setInteractive(0);
+                    });
+                });
+
+                // Contact links
+                document.querySelectorAll('.contact-link').forEach(link => {
+                    link.addEventListener('mouseenter', () => {
+                        window.bayerBg.setInteractive(0.7);
+                    });
+                    link.addEventListener('mouseleave', () => {
+                        window.bayerBg.setInteractive(0);
+                    });
+                });
+
+                // Hero social icons
+                document.querySelectorAll('.hero-social').forEach(icon => {
+                    icon.addEventListener('mouseenter', () => {
+                        window.bayerBg.setInteractive(0.4);
+                    });
+                    icon.addEventListener('mouseleave', () => {
+                        window.bayerBg.setInteractive(0);
+                    });
+                });
+
+                // Nav links
+                document.querySelectorAll('.nav-link').forEach(link => {
+                    link.addEventListener('mouseenter', () => {
+                        window.bayerBg.setInteractive(0.3);
+                    });
+                    link.addEventListener('mouseleave', () => {
+                        window.bayerBg.setInteractive(0);
+                    });
+                });
+            }
+        }
+
         return () => {
             // ScrollTrigger instances created inside matchMedia are auto-reverted
         };
