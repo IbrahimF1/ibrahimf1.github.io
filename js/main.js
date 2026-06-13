@@ -1530,6 +1530,39 @@ window.addEventListener('resize', () => {
                 }
             }
 
+            // Generate an ANIMATED ditherpunk favicon from the person's name.
+            // The initials + border stay static (legible at 16×16/32×32); only
+            // the Bayer-dither field and glitch pixels animate. Falls back to a
+            // single static frame when reduced-motion is preferred or the
+            // animator is unavailable. Name resolution is resilient to missing
+            // data fields.
+            let faviconName = '';
+            if (data.hero && data.hero.name) {
+                faviconName = `${data.hero.name.line1 || ''} ${data.hero.name.line2 || ''}`.trim();
+            }
+            if (!faviconName && data.site && data.site.description) {
+                // Last resort: pull a name out of the description ("Portfolio of John Doe — …").
+                const m = data.site.description.match(/of\s+([A-Z][a-z]+(?:\s+[A-Z][a-z]+)?)/);
+                if (m) faviconName = m[1];
+            }
+            const faviconOpts = {
+                darkColor: '#0a0a0a',                     // 1-bit "off" — site background
+                lightColor: '#d4c5ab',                    // 1-bit "on"  — site warm highlight
+                size: 32,                                 // crisp pixel-art output
+                gridSize: 16,                             // design grid (tab-legible)
+                ditherStrength: 0.7,                      // edge halftone density
+                border: true,                             // raw 1px frame
+                glitch: true,                             // corrupted-data pixels
+                glitchCount: 3,
+                animate: true,                            // seamless live dither shimmer
+                fps: 12                                   // throttled — favicons need no 60 fps
+            };
+            if (typeof animateFavicon === 'function') {
+                animateFavicon(faviconName, faviconOpts);
+            } else if (typeof generateInitialsFavicon === 'function') {
+                generateInitialsFavicon(faviconName, faviconOpts);
+            }
+
             // Generate all DOM content
             generateNav(data);
             generateHero(data);
