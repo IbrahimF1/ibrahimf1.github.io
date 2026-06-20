@@ -556,6 +556,56 @@ a:hover {
     color: var(--fg);
 }
 
+/* About CTA — terminal-prompt link out (e.g. to the Dev Diary) */
+.about-cta {
+    display: inline-flex;
+    align-items: center;
+    gap: 12px;
+    margin-top: 28px;
+    padding: 14px 22px;
+    border: 1px solid var(--border-bright);
+    color: var(--accent-bright);
+    text-decoration: none;
+    font-size: 12px;
+    letter-spacing: 0.2em;
+    text-transform: uppercase;
+    position: relative;
+    overflow: hidden;
+    transition: color var(--transition-raw), border-color var(--transition-raw);
+}
+
+.about-cta__prompt {
+    color: var(--accent);
+}
+
+.about-cta__arrow {
+    display: inline-block;
+    transition: transform 0.25s ease-out;
+}
+
+.about-cta::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: var(--highlight);
+    transform: translateX(-101%);
+    transition: transform 0.3s ease-out;
+    z-index: -1;
+}
+
+.about-cta:hover {
+    color: var(--bg);
+    border-color: var(--highlight);
+}
+
+.about-cta:hover::before {
+    transform: translateX(0);
+}
+
+.about-cta:hover .about-cta__arrow {
+    transform: translateX(6px);
+}
+
 /* About debris */
 .about-debris {
     position: absolute;

@@ -179,6 +179,20 @@ function generateAbout(data) {
         specsDiv.appendChild(row);
     });
     block3.appendChild(specsDiv);
+
+    // Optional CTA — e.g. a link out to the Dev Diary page.
+    if (about.cta && about.cta.href) {
+        const cta = document.createElement('a');
+        cta.href = about.cta.href;
+        cta.className = 'about-cta';
+        cta.setAttribute('data-cursor', 'link');
+        cta.innerHTML =
+            '<span class="about-cta__prompt">&gt;</span>' +
+            '<span class="about-cta__label">' + (about.cta.label || 'READ MORE') + '</span>' +
+            '<span class="about-cta__arrow">&rarr;</span>';
+        block3.appendChild(cta);
+    }
+
     container.appendChild(block3);
 
     // Debris — appended directly to the section for correct absolute positioning

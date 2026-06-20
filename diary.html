@@ -1,0 +1,261 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+    <meta name="theme-color" content="#0a0a0a">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <title>DEV_DIARY://LOG</title>
+    <meta name="description"
+        content="Development journal of John Doe — field notes on distributed systems, low-level architecture, and the interfaces in between.">
+    <!-- Ditherpunk favicon — static fallback, replaced at runtime by js/favicon.js -->
+    <link rel="icon" type="image/svg+xml" href="assets/favicon.svg">
+    <link rel="apple-touch-icon" href="assets/favicon.svg">
+    <link rel="preload" href="fonts/Datatype.wdth.wght.woff2" as="font" type="font/woff2" crossorigin>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Space+Mono:ital,wght@0,400;0,700;1,400;1,700&display=swap"
+        rel="stylesheet">
+    <style>
+        /* Critical CSS — inlined for faster first paint (shared foundation, mirrors index.html) */
+        @font-face {
+            font-family: 'Datatype';
+            src: url('fonts/Datatype.wdth.wght.woff2') format('woff2');
+            font-weight: 100 900;
+            font-stretch: 75% 125%;
+            font-display: swap
+        }
+
+        :root {
+            --bg: #0a0a0a;
+            --bg-elevated: #111110;
+            --fg: #c8c2b8;
+            --fg-dim: #6b6560;
+            --fg-bright: #e8e4df;
+            --accent: #8a7f72;
+            --accent-bright: #b5a898;
+            --border: #2a2825;
+            --border-bright: #3a3632;
+            --highlight: #d4c5ab;
+            --error: #8a6f5f;
+            --grid-line: rgba(200, 194, 184, 0.04);
+            --font-mono: 'Space Mono', 'Courier New', monospace;
+            --font-display: 'Datatype', 'Space Mono', monospace;
+            --transition-raw: 0.1s steps(2)
+        }
+
+        *,
+        *::before,
+        *::after {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box
+        }
+
+        html {
+            scroll-behavior: auto;
+            scrollbar-width: thin;
+            scrollbar-color: var(--fg-dim) var(--bg)
+        }
+
+        body {
+            background: var(--bg);
+            color: var(--fg);
+            font-family: var(--font-mono);
+            font-size: 14px;
+            line-height: 1.6;
+            overflow-x: hidden;
+            cursor: none;
+            position: relative
+        }
+
+        #bayer-bg {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: 0;
+            pointer-events: none
+        }
+
+        .noise-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+            z-index: 9999;
+            opacity: 0.035;
+            background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)'/%3E%3C/svg%3E");
+            background-repeat: repeat;
+            background-size: 256px 256px
+        }
+
+        .grid-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+            z-index: 1;
+            display: flex;
+            justify-content: space-between;
+            padding: 0 12.5%
+        }
+
+        .grid-line {
+            width: 1px;
+            height: 100%;
+            background: var(--grid-line)
+        }
+
+        .cursor-dot {
+            position: fixed;
+            width: 6px;
+            height: 6px;
+            background: var(--fg-bright);
+            border-radius: 0;
+            pointer-events: none;
+            z-index: 10001;
+            transform: translate(-50%, -50%);
+            mix-blend-mode: difference;
+            opacity: 0
+        }
+
+        .cursor-ring {
+            position: fixed;
+            width: 40px;
+            height: 40px;
+            border: 1px solid var(--fg-dim);
+            border-radius: 0;
+            pointer-events: none;
+            z-index: 10000;
+            transform: translate(-50%, -50%);
+            will-change: transform, width, height;
+            opacity: 0
+        }
+
+        @media (hover: none), (pointer: coarse) {
+            body { cursor: auto }
+            .cursor-dot, .cursor-ring { display: none }
+        }
+
+        .nav-bar {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 20px 30px;
+            z-index: 1000;
+            background: rgba(10, 10, 10, 0.85);
+            -webkit-backdrop-filter: blur(0px);
+            backdrop-filter: blur(0px);
+            border-bottom: 1px solid var(--border);
+            font-size: 11px;
+            letter-spacing: 0.1em;
+            text-transform: uppercase
+        }
+
+        .nav-back {
+            color: var(--accent-bright);
+            text-decoration: none;
+            transition: color var(--transition-raw);
+            font-variant-numeric: tabular-nums
+        }
+
+        .nav-back:hover {
+            color: var(--highlight)
+        }
+
+        .nav-brand {
+            color: var(--fg-dim);
+            letter-spacing: 0.2em
+        }
+
+        .nav-count {
+            color: var(--accent-bright);
+            font-variant-numeric: tabular-nums
+        }
+
+        .section {
+            position: relative;
+            min-height: 100vh;
+            overflow: hidden
+        }
+
+        @media (prefers-reduced-motion: reduce) {
+            .startup-overlay { display: none !important }
+        }
+    </style>
+    <link rel="stylesheet" href="css/style.css">
+    <link rel="stylesheet" href="css/diary.css">
+    <!-- Umami analytics -->
+    <script defer src="https://cloud.umami.is/script.js" data-website-id="5cc65dfa-2570-4543-b045-535f415f3fdd"></script>
+</head>
+
+<body>
+    <!-- NOISE OVERLAY -->
+    <div class="noise-overlay"></div>
+
+    <!-- GRID OVERLAY -->
+    <div class="grid-overlay">
+        <div class="grid-line"></div>
+        <div class="grid-line"></div>
+        <div class="grid-line"></div>
+        <div class="grid-line"></div>
+        <div class="grid-line"></div>
+        <div class="grid-line"></div>
+        <div class="grid-line"></div>
+        <div class="grid-line"></div>
+    </div>
+
+    <!-- CURSOR -->
+    <div class="cursor-dot"></div>
+    <div class="cursor-ring"></div>
+
+    <!-- NAV — simplified terminal header for the diary page -->
+    <nav class="nav-bar">
+        <a href="index.html" class="nav-back">[← HOME]</a>
+        <div class="nav-brand">DEV_DIARY://LOG</div>
+        <div class="nav-count" id="navCount">[---]</div>
+    </nav>
+
+    <!-- ==================== DIARY SECTION ==================== -->
+    <section id="diary" class="section diary-section">
+        <div class="section-label">05_DIARY</div>
+        <div class="diary-bg-text" id="diaryBgText">DIARY</div>
+
+        <header class="diary-header" id="diaryHeader">
+            <!-- Intro populated from diary/diary.yaml by JS -->
+        </header>
+
+        <div class="diary-stack" id="diaryStack">
+            <!-- Entries populated from diary/diary.yaml by JS -->
+        </div>
+
+        <footer class="diary-footer">
+            <a href="index.html" class="diary-back-link">← RETURN TO PORTFOLIO</a>
+            <span class="diary-footer-meta">END_OF_LOG // v1.0.0</span>
+        </footer>
+    </section>
+
+    <!-- SCRIPTS — deferred for parallel download and non-blocking execution -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/js-yaml/4.1.0/js-yaml.min.js" defer></script>
+    <!-- markdown-it — parses each entry's Markdown body file into HTML (global: markdownit) -->
+    <script src="https://cdn.jsdelivr.net/npm/markdown-it@14.1.0/dist/markdown-it.min.js" defer></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/gsap.min.js" defer></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/ScrollTrigger.min.js" defer></script>
+    <script src="js/bayer-background.js" defer></script>
+    <script src="js/favicon.js" defer></script>
+    <script src="js/diary.js" defer></script>
+</body>
+
+</html>

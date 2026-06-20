@@ -90,6 +90,9 @@ about:
       value: "6+ PRODUCTION"
     - label: "STATUS::"
       value: "OPEN TO WORK"
+  cta:
+    label: "READ THE DEV DIARY"
+    href: "diary.html"
   debris:
     - content: "SYS"
     - content: "0x4F"

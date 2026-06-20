@@ -1,0 +1,73 @@
+# ============================================================
+# DEV_DIARY://LOG — DEVELOPMENT JOURNAL DATA SOURCE
+# Single source of truth for the Dev Diary page content.
+# Add/remove entries freely — the UI scales automatically.
+#
+# Entry schema:
+#   index    : zero-padded log number (string)
+#   date     : YYYY.MM.DD stamp
+#   title    : entry headline (UPPERCASE fits the terminal aesthetic)
+#   image    : path to a header image for the card
+#   image_alt: accessible alt text
+#   summary  : 1–2 sentence hook shown on the collapsed card
+#   tags     : list of short tags
+#   body     : path to a Markdown file (relative to the site root)
+#              holding the full entry text. The file is fetched and
+#              parsed with markdown-it on first expand, then cached.
+#              Supported Markdown: paragraphs, headings, lists,
+#              blockquotes, and fenced code blocks.
+# ============================================================
+
+diary:
+  page:
+    title: "DEV_DIARY://LOG"
+    description: "Development journal of John Doe — field notes on distributed systems, low-level architecture, and the interfaces in between."
+    bg_text: "DIARY"
+    intro: >-
+      Field notes from the build. Failures, fixes, and the occasional
+      3am breakthrough — logged raw, no revisionism.
+
+  # ---- ENTRIES (newest last; rendered top-to-bottom) ----
+  entries:
+    - index: "01"
+      date: "2026.06.12"
+      title: "WHY ONE INTERFACE FELT WRONG"
+      image: "assets/projects/project1.png"
+      image_alt: "Side-by-side parent control view and child story view from FaceyBuk"
+      summary: >-
+        FaceyBuk's shared parent/child UI technically worked — until splitting
+        it by role turned a video call into a shared room. Same story, two intents.
+      tags:
+        - "UX"
+        - "WEBRTC"
+        - "ROLE"
+      body: "diary/entries/01-why-the-cursor-felt-dead.md"
+
+    - index: "02"
+      date: "2026.05.28"
+      title: "3D MARKERS FROM A FLAT SCREENSHOT"
+      image: "assets/projects/project2.gif"
+      image_alt: "SceneSplat 3D viewport with labeled evidence markers placed in world space"
+      summary: >-
+        Gemini finds evidence in 2D. Dropping those detections back into world
+        space without raycasting the whole scene to death is the entire job.
+      tags:
+        - "THREE.JS"
+        - "PERF"
+        - "AI"
+      body: "diary/entries/02-ditherpunk-background-at-60fps.md"
+
+    - index: "03"
+      date: "2026.05.03"
+      title: "WHEN TO TRUST A SINGLE THRESHOLD"
+      image: "assets/projects/project3.jpeg"
+      image_alt: "Raspberry Pi wired to a digital temperature sensor on a breadboard"
+      summary: >-
+        Heat Aware's simplest version — one number, one phone call — is the
+        feature, not the bug. Here's where a bare threshold holds up, and
+        where it quietly doesn't.
+      tags:
+        - "IOT"
+        - "ARCHITECTURE"
+        - "OPINION"
+      body: "diary/entries/03-yaml-as-a-cms.md"
