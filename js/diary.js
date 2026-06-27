@@ -1,14 +1,10 @@
 /* ============================================================
-   DEV_DIARY://LOG — DATA-DRIVEN DIARY PAGE
-   Mirrors the architecture of main.js: content is loaded from
-   diary/diary.yaml (the single source of truth), the DOM is generated
-   programmatically, and GSAP/ScrollTrigger drive the motion.
-
-   Each entry's full body now lives in its own Markdown file
-   (diary/entries/*.md). The body is fetched on first expand,
-   parsed to HTML with markdown-it, cached for re-opens, and
-   mapped onto the existing diary-body__* CSS classes so the
-   formatting stays consistent with the hand-built vocabulary.
+   DEV_DIARY://LOG — TRANSMISSION CONSOLE
+   Content loads from diary/diary.yaml (single source of truth),
+   the DOM is generated programmatically, and GSAP/ScrollTrigger
+   drive the motion. Each entry renders as a full-viewport
+   "plate"; its Markdown body (diary/entries/*.md) is fetched and
+   parsed on first open into a fullscreen reader, then cached.
    ============================================================ */
 
 (function () {
@@ -16,7 +12,6 @@
 
     // ---- SMALL HELPERS ----
 
-    // Create an element with classes and optional innerHTML in one call.
     function el(tag, className, html) {
         const node = document.createElement(tag);
         if (className) node.className = className;
@@ -24,7 +19,6 @@
         return node;
     }
 
-    // Escape arbitrary text for safe insertion (used for non-HTML fields).
     function escapeText(str) {
         const div = document.createElement('div');
         div.textContent = str == null ? '' : String(str);
@@ -35,10 +29,8 @@
 
     // ---- MARKDOWN PARSER (markdown-it) ----
 
-    // Lazily-built singleton. Its renderer rules are overridden so that the
-    // generated HTML elements carry the existing diary-body__* classes —
-    // meaning the Markdown output is styled by the very CSS that used to
-    // target the hand-built blocks. No new styles are required for parity.
+    // Lazily-built singleton. Renderer rules add the diary-body__*
+    // classes so parsed Markdown is styled by the existing vocabulary.
     let mdParser = null;
 
     function getMarkdownParser() {
@@ -46,30 +38,26 @@
         if (typeof markdownit !== 'function') return null; // CDN blocked/unavailable
 
         const md = markdownit({
-            html: false,        // escape raw HTML — bodies use Markdown syntax
-            breaks: false,      // single newlines are NOT <br> (paragraph breaks only)
-            linkify: false,     // don't auto-link bare URLs
-            typographer: false  // preserve literal punctuation
+            html: false,
+            breaks: false,
+            linkify: false,
+            typographer: false
         });
 
-        // Generic passthrough so we can wrap the default renderer for any token.
         const proxy = (tokens, idx, options, env, self) => self.renderToken(tokens, idx, options);
 
-        // Headings → .diary-body__heading
         const headingOpen = md.renderer.rules.heading_open || proxy;
         md.renderer.rules.heading_open = function (tokens, idx, options, env, self) {
             tokens[idx].attrJoin('class', 'diary-body__heading');
             return headingOpen(tokens, idx, options, env, self);
         };
 
-        // Paragraphs → .diary-body__paragraph
         const paragraphOpen = md.renderer.rules.paragraph_open || proxy;
         md.renderer.rules.paragraph_open = function (tokens, idx, options, env, self) {
             tokens[idx].attrJoin('class', 'diary-body__paragraph');
             return paragraphOpen(tokens, idx, options, env, self);
         };
 
-        // Bullet & ordered lists → .diary-body__list
         const bulletOpen = md.renderer.rules.bullet_list_open || proxy;
         md.renderer.rules.bullet_list_open = function (tokens, idx, options, env, self) {
             tokens[idx].attrJoin('class', 'diary-body__list');
@@ -81,15 +69,12 @@
             return orderedOpen(tokens, idx, options, env, self);
         };
 
-        // Blockquotes → .diary-body__quote
         const blockquoteOpen = md.renderer.rules.blockquote_open || proxy;
         md.renderer.rules.blockquote_open = function (tokens, idx, options, env, self) {
             tokens[idx].attrJoin('class', 'diary-body__quote');
             return blockquoteOpen(tokens, idx, options, env, self);
         };
 
-        // Fenced code → .diary-body__code wrapper with a language label + <pre>,
-        // matching the structure the old hand-built code blocks produced.
         md.renderer.rules.fence = function (tokens, idx) {
             const token = tokens[idx];
             const lang = token.info ? token.info.trim() : '';
@@ -106,26 +91,18 @@
 
     // ---- ENTRY BODY LOADING (fetch + parse + cache, with error handling) ----
 
-    // Cache of already-fetched+parsed entry bodies, keyed by file path.
     const bodyCache = new Map();
 
-    // Fetch a Markdown body file, parse it to HTML, and cache the result.
-    // Rejects (with a friendly Error) on network failure or a missing file
-    // (e.g. 404) — callers render an inline error notice instead of crashing.
     function loadEntryBody(entry) {
         const path = entry.body;
         if (!path) return Promise.reject(new Error('No body file is referenced for this entry.'));
-
-        // Serve from cache on repeat opens (avoids re-fetching).
         if (bodyCache.has(path)) return Promise.resolve(bodyCache.get(path));
 
         const md = getMarkdownParser();
 
         return fetch(path)
             .then(response => {
-                if (!response.ok) {
-                    throw new Error(`Log file not found (HTTP ${response.status}).`);
-                }
+                if (!response.ok) throw new Error(`Log file not found (HTTP ${response.status}).`);
                 return response.text();
             })
             .then(markdown => {
@@ -133,8 +110,6 @@
                 if (md) {
                     html = md.render(markdown);
                 } else {
-                    // Parser unavailable (CDN blocked) — degrade gracefully to
-                    // escaped plain text so the entry remains readable.
                     html = `<p class="diary-body__paragraph">${escapeText(markdown).replace(/\n{2,}/g, '</p><p class="diary-body__paragraph">')}</p>`;
                 }
                 bodyCache.set(path, html);
@@ -142,7 +117,6 @@
             });
     }
 
-    // Build the inline error notice shown when a body file can't be loaded.
     function buildBodyError(err, entry) {
         const msg = escapeText(err.message || 'Unknown error');
         const path = escapeText(entry.body || '');
@@ -160,11 +134,10 @@
 
     function generateHeader(page) {
         const header = document.getElementById('diaryHeader');
+        if (!header) return;
 
-        const kicker = el('div', 'diary-header__kicker', 'FIELD NOTES // DEV JOURNAL');
-        header.appendChild(kicker);
+        header.appendChild(el('div', 'diary-header__kicker', 'FIELD NOTES // DEV JOURNAL'));
 
-        // Split the title on "://" so the suffix gets the stroke treatment.
         const rawTitle = page.title || 'DEV_DIARY://LOG';
         const titleParts = rawTitle.split('://');
         const titleHtml = titleParts.length > 1
@@ -177,144 +150,68 @@
         }
     }
 
-    function generateCard(entry) {
-        const card = el('article', 'diary-card');
-        card.setAttribute('data-index', entry.index || '');
+    function makeOpenable(node, entry) {
+        if (!entry.body || !node) return node;
+        const label = 'Open transmission ' + (entry.index || '') + (entry.title ? ': ' + entry.title : '');
+        node.setAttribute('role', 'button');
+        node.setAttribute('tabindex', '0');
+        node.setAttribute('aria-label', label);
+        node.classList.add('is-openable');
+        node.addEventListener('click', () => openReader(entry));
+        node.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter' || e.key === ' ') {
+                e.preventDefault();
+                openReader(entry);
+            }
+        });
+        return node;
+    }
 
-        // Index watermark
-        card.appendChild(el('div', 'diary-card__index', escapeText(entry.index || '')));
+    function generatePlate(entry, position) {
+        const plate = el('article', 'plate');
+        plate.setAttribute('data-index', entry.index || '');
+        if (position % 2 === 1) plate.classList.add('plate--alt');
 
-        // Head: date + title + line
-        const head = el('div', 'diary-card__head');
-        head.appendChild(el('div', 'diary-card__date', escapeText(entry.date || '')));
-        head.appendChild(el('h2', 'diary-card__title', escapeText(entry.title || '')));
-        head.appendChild(el('div', 'diary-card__line'));
-        card.appendChild(head);
+        // Giant outline index
+        plate.appendChild(el('div', 'plate__index', escapeText(entry.index || '')));
 
-        // Media
+        // Vertical date stamp
+        if (entry.date) plate.appendChild(el('div', 'plate__date', escapeText(entry.date)));
+
+        // Text column (anchored bottom)
+        const text = el('div', 'plate__text');
+        text.appendChild(el('div', 'plate__label', 'TRANSMISSION ' + escapeText(entry.index || '')));
+        const title = el('h2', 'plate__title', escapeText(entry.title || ''));
+        text.appendChild(makeOpenable(title, entry));
+        if (entry.summary) text.appendChild(el('p', 'plate__summary', escapeText(entry.summary)));
+        if (Array.isArray(entry.tags) && entry.tags.length) {
+            const tagsHtml = entry.tags.map(t => escapeText(t)).join('&nbsp;/&nbsp;');
+            text.appendChild(el('div', 'plate__tags', '<b>&#9612;TAGS</b>&nbsp;&nbsp;' + tagsHtml));
+        }
+        if (entry.body) {
+            const open = document.createElement('button');
+            open.type = 'button';
+            open.className = 'plate__open';
+            open.innerHTML = '[ OPEN_TRANSMISSION ' + escapeText(entry.index || '') + ' &rarr; ]';
+            open.addEventListener('click', () => openReader(entry));
+            text.appendChild(open);
+        }
+        plate.appendChild(text);
+
+        // Media column
         if (entry.image) {
-            const media = el('div', 'diary-card__media');
+            const media = el('div', 'plate__media');
             const img = document.createElement('img');
             img.src = entry.image;
             img.alt = entry.image_alt || '';
             img.loading = 'lazy';
             img.decoding = 'async';
             media.appendChild(img);
-            card.appendChild(media);
+            ['tl', 'tr', 'bl', 'br'].forEach(c => media.appendChild(el('span', 'plate__tick plate__tick--' + c)));
+            plate.appendChild(makeOpenable(media, entry));
         }
 
-        // Preview body: summary + tags
-        const preview = el('div', 'diary-card__body-preview');
-        if (entry.summary) {
-            preview.appendChild(el('p', 'diary-card__summary', escapeText(entry.summary)));
-        }
-        if (Array.isArray(entry.tags) && entry.tags.length) {
-            const tags = el('div', 'diary-card__tags');
-            entry.tags.forEach(tag => tags.appendChild(el('span', 'diary-tag', escapeText(tag))));
-            preview.appendChild(tags);
-        }
-        card.appendChild(preview);
-
-        // Read-more toggle (only if a Markdown body file is referenced).
-        if (entry.body) {
-            const more = document.createElement('button');
-            more.type = 'button';
-            more.className = 'diary-card__more';
-            more.setAttribute('aria-expanded', 'false');
-            more.innerHTML =
-                '<span class="diary-card__more-prompt">></span>' +
-                '<span class="diary-card__more-label">READ_LOG</span>' +
-                '<span class="diary-card__more-arrow">→</span>';
-            card.appendChild(more);
-
-            // Expandable full entry — populated lazily on first open.
-            const full = el('div', 'diary-card__full');
-            full.setAttribute('aria-hidden', 'true');
-            const inner = el('div', 'diary-card__full-inner');
-            full.appendChild(inner);
-            card.appendChild(full);
-
-            // Toggle behaviour: fetch+parse the Markdown on first expand, then cache.
-            more.addEventListener('click', () => toggleEntry(card, more, full, entry));
-        }
-
-        return card;
-    }
-
-    function toggleEntry(card, button, full, entry) {
-        const isOpen = card.classList.contains('is-open');
-        const label = button.querySelector('.diary-card__more-label');
-        const inner = full.querySelector('.diary-card__full-inner');
-
-        // Shared expand/collapse animation, factored out so it runs after the
-        // body has been injected (keeping GSAP's height calc accurate).
-        function collapse() {
-            card.classList.remove('is-open');
-            button.setAttribute('aria-expanded', 'false');
-            full.setAttribute('aria-hidden', 'true');
-            if (label) label.textContent = 'READ_LOG';
-            if (prefersReducedMotion || typeof gsap === 'undefined') {
-                full.style.height = '0';
-                full.style.opacity = '0';
-            } else {
-                gsap.to(full, {
-                    height: 0,
-                    autoAlpha: 0,
-                    duration: 0.4,
-                    ease: 'power3.in',
-                    onComplete: () => { if (typeof ScrollTrigger !== 'undefined') ScrollTrigger.refresh(); }
-                });
-            }
-        }
-
-        function expand() {
-            card.classList.add('is-open');
-            button.setAttribute('aria-expanded', 'true');
-            full.setAttribute('aria-hidden', 'false');
-            if (label) label.textContent = 'CLOSE_LOG';
-            if (prefersReducedMotion || typeof gsap === 'undefined') {
-                full.style.height = 'auto';
-                full.style.opacity = '1';
-            } else {
-                gsap.to(full, {
-                    height: 'auto',
-                    autoAlpha: 1,
-                    duration: 0.55,
-                    ease: 'power3.out',
-                    onComplete: () => { if (typeof ScrollTrigger !== 'undefined') ScrollTrigger.refresh(); }
-                });
-            }
-        }
-
-        if (isOpen) {
-            collapse();
-            return;
-        }
-
-        // If the body was already loaded (or errored), just expand.
-        if (card.dataset.loaded === 'true') {
-            expand();
-            return;
-        }
-
-        // First open: fetch + parse the Markdown (or render an error notice),
-        // mark as loaded, then expand so the user always sees a result.
-        if (label) label.textContent = 'LOADING...';
-        button.disabled = true;
-
-        loadEntryBody(entry)
-            .then(html => {
-                inner.innerHTML = html;
-            })
-            .catch(err => {
-                console.error(`Failed to load diary entry body "${entry.body}":`, err);
-                inner.innerHTML = buildBodyError(err, entry);
-            })
-            .finally(() => {
-                card.dataset.loaded = 'true';
-                button.disabled = false;
-                expand();
-            });
+        return plate;
     }
 
     function generateDiary(data) {
@@ -322,36 +219,204 @@
         const page = diary.page || {};
         const entries = Array.isArray(diary.entries) ? diary.entries : [];
 
-        // Page metadata
         if (page.title) {
             document.title = page.title;
             const metaDesc = document.querySelector('meta[name="description"]');
             if (metaDesc && page.description) metaDesc.content = page.description;
         }
 
-        // Background watermark + header
-        document.getElementById('diaryBgText').textContent = page.bg_text || 'DIARY';
+        const bg = document.getElementById('diaryBgText');
+        if (bg) bg.textContent = page.bg_text || 'DIARY';
+
         generateHeader(page);
 
-        // Nav entry count
         const navCount = document.getElementById('navCount');
-        if (navCount) {
-            navCount.textContent = `[${String(entries.length).padStart(2, '0')}]`;
-        }
+        if (navCount) navCount.textContent = `[${String(entries.length).padStart(2, '0')}]`;
 
-        // Entry cards
         const stack = document.getElementById('diaryStack');
-        entries.forEach(entry => stack.appendChild(generateCard(entry)));
+        if (stack) entries.forEach((entry, i) => stack.appendChild(generatePlate(entry, i)));
+
+        buildRail(entries);
+
+        return entries.length;
     }
 
-    // ---- CUSTOM CURSOR (mirrors main.js initCursor, kept self-contained) ----
+    // ---- RAIL ----
+
+    function buildRail(entries) {
+        const rail = document.getElementById('diaryRail');
+        if (!rail) return;
+        const plates = document.querySelectorAll('.plate');
+        entries.forEach((e, i) => {
+            const dot = document.createElement('button');
+            dot.type = 'button';
+            dot.className = 'rail__dot';
+            dot.setAttribute('aria-label', 'Go to transmission ' + (e.index || (i + 1)));
+            dot.dataset.index = e.index || '';
+            dot.addEventListener('click', () => {
+                const plate = plates[i];
+                if (plate) plate.scrollIntoView({ behavior: prefersReducedMotion ? 'auto' : 'smooth', block: 'start' });
+            });
+            rail.appendChild(dot);
+        });
+    }
+
+    // ---- READER (fullscreen, lazy body load) ----
+
+    function openReader(entry) {
+        const reader = document.getElementById('diaryReader');
+        const inner = document.getElementById('diaryReaderInner');
+        if (!reader || !inner) return;
+
+        const idxEl = document.getElementById('diaryReaderIdx');
+        const titleEl = document.getElementById('diaryReaderTitle');
+        const dateEl = document.getElementById('diaryReaderDate');
+        if (idxEl) idxEl.textContent = entry.index || '';
+        if (titleEl) titleEl.textContent = entry.title || '';
+        if (dateEl) dateEl.textContent = entry.date || '';
+
+        const reveal = () => {
+            reader.classList.add('is-open');
+            reader.setAttribute('aria-hidden', 'false');
+            document.body.style.overflow = 'hidden';
+            const scroller = reader.querySelector('.reader__scroll');
+            if (scroller) scroller.scrollTop = 0;
+            const closeBtn = document.getElementById('diaryReaderClose');
+            if (closeBtn) closeBtn.focus();
+        };
+
+        // Cached: open immediately.
+        if (entry.body && bodyCache.has(entry.body)) {
+            inner.innerHTML = bodyCache.get(entry.body);
+            reveal();
+            return;
+        }
+
+        // First open: show the reader with a loading state, then fetch.
+        inner.innerHTML = '<p class="reader__loading">DECODING TRANSMISSION</p>';
+        reveal();
+
+        loadEntryBody(entry)
+            .then(html => { inner.innerHTML = html; })
+            .catch(err => {
+                console.error(`Failed to load diary entry body "${entry.body}":`, err);
+                inner.innerHTML = buildBodyError(err, entry);
+            })
+            .finally(() => {
+                const scroller = reader.querySelector('.reader__scroll');
+                if (scroller) scroller.scrollTop = 0;
+            });
+    }
+
+    function closeReader() {
+        const reader = document.getElementById('diaryReader');
+        if (!reader || !reader.classList.contains('is-open')) return;
+        reader.classList.remove('is-open');
+        reader.setAttribute('aria-hidden', 'true');
+        document.body.style.overflow = '';
+    }
+
+    function initReader() {
+        const closeBtn = document.getElementById('diaryReaderClose');
+        if (closeBtn) closeBtn.addEventListener('click', closeReader);
+
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'Escape') closeReader();
+        });
+
+        const reader = document.getElementById('diaryReader');
+        if (reader) {
+            reader.addEventListener('click', (e) => {
+                // Close only when clicking the overlay chrome, not the content.
+                if (e.target === reader) closeReader();
+            });
+        }
+    }
+
+    // ---- TELEMETRY (live clock, signal, cursor coords) ----
+
+    function initTelemetry() {
+        const clock = document.getElementById('conClock');
+        const sig = document.getElementById('conSig');
+        const xEl = document.getElementById('conX');
+        const yEl = document.getElementById('conY');
+
+        if (clock) {
+            const pad = n => String(n).padStart(2, '0');
+            const tick = () => {
+                const d = new Date();
+                clock.textContent = `${pad(d.getUTCHours())}:${pad(d.getUTCMinutes())}:${pad(d.getUTCSeconds())}`;
+            };
+            tick();
+            setInterval(tick, 1000);
+        }
+
+        if (sig) {
+            const N = 6;
+            for (let i = 0; i < N; i++) sig.appendChild(document.createElement('i'));
+            const bars = sig.querySelectorAll('i');
+            const fluctuate = () => {
+                const level = 2 + Math.floor(Math.random() * (N - 1));
+                bars.forEach((b, i) => b.classList.toggle('on', i < level));
+            };
+            fluctuate();
+            setInterval(fluctuate, 1400);
+        }
+
+        if (xEl && yEl) {
+            let raf = 0;
+            let lastX = 0, lastY = 0;
+            window.addEventListener('mousemove', (e) => {
+                lastX = e.clientX;
+                lastY = e.clientY;
+                if (raf) return;
+                raf = requestAnimationFrame(() => {
+                    raf = 0;
+                    xEl.textContent = String(Math.round(lastX)).padStart(4, '0');
+                    yEl.textContent = String(Math.round(lastY)).padStart(4, '0');
+                });
+            });
+        }
+    }
+
+    // ---- SCROLL SPY (active plate + progress readout) ----
+
+    function initScrollSpy(entryCount) {
+        const pos = document.getElementById('conPos');
+        const rail = document.getElementById('diaryRail');
+        const dots = rail ? rail.querySelectorAll('.rail__dot') : [];
+        const plates = document.querySelectorAll('.plate');
+
+        let raf = 0;
+        const update = () => {
+            raf = 0;
+            const mid = window.innerHeight / 2;
+            let active = 0;
+            plates.forEach((p, i) => {
+                const r = p.getBoundingClientRect();
+                const center = r.top + r.height / 2;
+                if (center <= mid + 1) active = i;
+            });
+            plates.forEach((p, i) => p.classList.toggle('is-active', i === active));
+            dots.forEach((d, i) => d.classList.toggle('is-active', i === active));
+            if (pos) {
+                const idx = (plates[active] && plates[active].dataset.index) || String(active + 1).padStart(2, '0');
+                pos.textContent = `${idx}/${String(entryCount).padStart(2, '0')}`;
+            }
+        };
+        const onScroll = () => { if (!raf) raf = requestAnimationFrame(update); };
+        window.addEventListener('scroll', onScroll, { passive: true });
+        window.addEventListener('resize', onScroll);
+        update();
+    }
+
+    // ---- CUSTOM CURSOR ----
 
     function initCursor() {
         if (typeof gsap === 'undefined') return;
         const isTouchDevice = window.matchMedia('(hover: none), (pointer: coarse)').matches;
         const cursorDot = document.querySelector('.cursor-dot');
         const cursorRing = document.querySelector('.cursor-ring');
-
         if (isTouchDevice || !cursorDot || !cursorRing) return;
 
         let cursorRevealed = false;
@@ -361,22 +426,19 @@
         const ringYTo = gsap.quickTo(cursorRing, 'y', { duration: 0.35, ease: 'power2.out' });
 
         document.addEventListener('mousemove', (e) => {
-            const mx = e.clientX;
-            const my = e.clientY;
             if (!cursorRevealed) {
                 cursorRevealed = true;
-                gsap.set(cursorDot, { x: mx, y: my, opacity: 1 });
-                gsap.set(cursorRing, { x: mx, y: my, opacity: 1 });
+                gsap.set(cursorDot, { x: e.clientX, y: e.clientY, opacity: 1 });
+                gsap.set(cursorRing, { x: e.clientX, y: e.clientY, opacity: 1 });
                 return;
             }
-            dotXTo(mx);
-            dotYTo(my);
-            ringXTo(mx);
-            ringYTo(my);
+            dotXTo(e.clientX);
+            dotYTo(e.clientY);
+            ringXTo(e.clientX);
+            ringYTo(e.clientY);
         });
 
-        // Hover growth on interactive elements
-        document.querySelectorAll('a, button, .diary-card').forEach(node => {
+        document.querySelectorAll('a, button, .is-openable').forEach(node => {
             node.addEventListener('mouseenter', () => {
                 gsap.to(cursorRing, { width: 60, height: 60, borderColor: 'var(--fg-bright)', duration: 0.2, ease: 'power2.out' });
             });
@@ -393,39 +455,40 @@
         gsap.registerPlugin(ScrollTrigger);
 
         if (prefersReducedMotion) {
-            // Reveal everything immediately, no motion.
-            gsap.set('.diary-header, .diary-card', { autoAlpha: 1, y: 0 });
+            gsap.set('.diary-header > *', { autoAlpha: 1, y: 0 });
+            gsap.set('.plate__index, .plate__label, .plate__title, .plate__summary, .plate__tags, .plate__open, .plate__media, .plate__date', { autoAlpha: 1, y: 0 });
             return;
         }
 
-        // Header reveal
         gsap.from('.diary-header > *', {
             autoAlpha: 0,
-            y: 24,
-            duration: 0.6,
+            y: 30,
+            duration: 0.7,
             ease: 'power2.out',
             stagger: 0.08,
             delay: 0.1
         });
 
-        // Staggered card reveals as they enter the viewport (ScrollTrigger.batch).
-        gsap.set('.diary-card', { autoAlpha: 0, y: 40 });
-        ScrollTrigger.batch('.diary-card', {
-            start: 'top 85%',
-            once: true,
-            onEnter: (batch) => {
-                gsap.to(batch, {
+        gsap.utils.toArray('.plate').forEach(plate => {
+            const kids = plate.querySelectorAll(
+                '.plate__index, .plate__date, .plate__label, .plate__title, .plate__summary, .plate__tags, .plate__open, .plate__media'
+            );
+            gsap.set(kids, { autoAlpha: 0, y: 44 });
+            ScrollTrigger.create({
+                trigger: plate,
+                start: 'top 72%',
+                once: true,
+                onEnter: () => gsap.to(kids, {
                     autoAlpha: 1,
                     y: 0,
-                    duration: 0.6,
+                    duration: 0.75,
                     ease: 'power2.out',
-                    stagger: 0.12,
+                    stagger: 0.09,
                     overwrite: true
-                });
-            }
+                })
+            });
         });
 
-        // Keep trigger positions accurate on resize.
         let resizeTimer;
         window.addEventListener('resize', () => {
             clearTimeout(resizeTimer);
@@ -433,7 +496,7 @@
         });
     }
 
-    // ---- FAVICON (reuse the shared animator from favicon.js) ----
+    // ---- FAVICON ----
 
     function initFavicon() {
         if (typeof animateFavicon !== 'function' && typeof generateInitialsFavicon !== 'function') return;
@@ -454,7 +517,7 @@
         else generateInitialsFavicon(name, opts);
     }
 
-    // ---- BOOTSTRAP: LOAD YAML → GENERATE DOM → INIT ----
+    // ---- BOOTSTRAP ----
 
     (function bootstrap() {
         fetch('diary/diary.yaml')
@@ -465,9 +528,12 @@
             .then(yamlText => {
                 const data = jsyaml.load(yamlText);
 
-                generateDiary(data);
+                const count = generateDiary(data);
                 initFavicon();
                 initCursor();
+                initReader();
+                initTelemetry();
+                initScrollSpy(count);
                 initAnimations();
             })
             .catch(err => {
@@ -478,7 +544,7 @@
                         <div>
                             <p style="font-size:11px;letter-spacing:0.3em;text-transform:uppercase;margin-bottom:10px;color:#b5a898;">SYS::ERROR</p>
                             <p style="color:#6b6560;font-size:13px;">Failed to load diary/diary.yaml — ${err.message}</p>
-                            <p style="margin-top:24px;"><a href="index.html" style="color:#b5a898;text-decoration:none;letter-spacing:0.2em;text-transform:uppercase;font-size:11px;">[← RETURN HOME]</a></p>
+                            <p style="margin-top:24px;"><a href="index.html" style="color:#b5a898;text-decoration:none;letter-spacing:0.2em;text-transform:uppercase;font-size:11px;">[&larr; RETURN HOME]</a></p>
                         </div>
                     </div>
                 `);

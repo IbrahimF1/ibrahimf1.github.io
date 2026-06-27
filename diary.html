@@ -247,6 +247,35 @@
         </footer>
     </section>
 
+    <!-- ==================== TRANSMISSION CONSOLE ==================== -->
+    <!-- Anti-design telemetry overlay — live readouts, fixed to the viewport.
+         Decorative; aria-hidden so assistive tech ignores it. -->
+    <div class="console" aria-hidden="true">
+        <div class="console__cell">UTC <span id="conClock">--:--:--</span></div>
+        <div class="console__cell">CURSOR <span id="conX">0000</span>/<span id="conY">0000</span></div>
+        <div class="console__cell">SIG <span class="sigbars" id="conSig"></span></div>
+        <div class="console__cell">REC <span id="conPos">00/00</span></div>
+    </div>
+
+    <!-- Progress rail — one tick per transmission -->
+    <aside class="rail" id="diaryRail" aria-label="Transmission navigation"></aside>
+
+    <!-- ==================== READER OVERLAY ==================== -->
+    <!-- Fullscreen reader for an expanded transmission body. Hidden by default. -->
+    <div class="reader" id="diaryReader" role="dialog" aria-modal="true" aria-hidden="true" aria-labelledby="diaryReaderTitle">
+        <div class="reader__bar">
+            <div class="reader__meta">
+                <span class="reader__idx" id="diaryReaderIdx">00</span>
+                <span class="reader__title" id="diaryReaderTitle">—</span>
+                <span class="reader__date" id="diaryReaderDate">—</span>
+            </div>
+            <button class="reader__close" id="diaryReaderClose" type="button" aria-label="Close transmission">[ ESC ] CLOSE</button>
+        </div>
+        <div class="reader__scroll">
+            <div class="reader__inner" id="diaryReaderInner"></div>
+        </div>
+    </div>
+
     <!-- SCRIPTS — deferred for parallel download and non-blocking execution -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/js-yaml/4.1.0/js-yaml.min.js" defer></script>
     <!-- markdown-it — parses each entry's Markdown body file into HTML (global: markdownit) -->
