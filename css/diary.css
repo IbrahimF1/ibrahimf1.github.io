@@ -200,11 +200,17 @@
 }
 .plate__title.is-openable {
     cursor: none;
-    transition: color var(--transition-raw);
+    text-decoration: underline;
+    text-decoration-color: transparent;
+    text-decoration-thickness: 2px;
+    text-underline-offset: 0.14em;
+    transition: color 0.2s ease, text-decoration-color 0.2s ease, text-shadow 0.3s ease;
 }
 .plate__title.is-openable:hover,
 .plate__title.is-openable:focus-visible {
     color: var(--highlight);
+    text-decoration-color: var(--highlight);
+    text-shadow: 0 0 30px rgba(212, 197, 171, 0.45);
     outline: none;
 }
 .plate__title.is-openable:focus-visible {
@@ -245,11 +251,12 @@
     letter-spacing: 0.3em;
     text-transform: uppercase;
     color: var(--highlight);
-    transition: color var(--transition-raw), border-color var(--transition-raw);
+    transition: color var(--transition-raw), border-color var(--transition-raw), text-shadow 0.25s ease;
 }
 .plate__open:hover {
     color: var(--fg-bright);
     border-color: var(--highlight);
+    text-shadow: 0 0 18px rgba(212, 197, 171, 0.5);
 }
 .plate__open::after {
     content: '_';
@@ -271,10 +278,45 @@
 }
 .plate__media.is-openable {
     cursor: none;
+    transition: border-color 0.25s ease;
+}
+.plate__media.is-openable::before {
+    content: '[ EXPAND ↗ ]';
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%) scale(0.88);
+    z-index: 7;
+    padding: 12px 18px;
+    border: 1px solid var(--highlight);
+    background: rgba(10, 10, 10, 0.78);
+    color: var(--highlight);
+    font-family: var(--font-mono);
+    font-size: 11px;
+    letter-spacing: 0.3em;
+    text-transform: uppercase;
+    white-space: nowrap;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.22s ease, transform 0.3s cubic-bezier(0.22, 1, 0.36, 1);
+}
+.plate__media.is-openable:hover,
+.plate__media.is-openable:focus-visible {
+    border-color: var(--highlight);
+    outline: none;
 }
 .plate__media.is-openable:focus-visible {
     outline: 2px solid var(--highlight);
     outline-offset: -2px;
+}
+.plate__media.is-openable:hover::before,
+.plate__media.is-openable:focus-visible::before {
+    opacity: 1;
+    transform: translate(-50%, -50%) scale(1);
+}
+.plate .plate__media.is-openable:hover img {
+    filter: grayscale(40%) contrast(1.15) brightness(0.28);
+    transform: scale(1.1);
 }
 .plate__media img {
     width: 100%;
@@ -716,7 +758,10 @@
 
     .plate,
     .plate__media img,
+    .plate__media.is-openable::before,
     .plate__index,
+    .plate__title.is-openable,
+    .plate__open,
     .reader { transition: none; }
 
     .reader { transform: none; }
