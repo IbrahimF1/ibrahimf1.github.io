@@ -65,6 +65,29 @@ body {
     pointer-events: none;
 }
 
+/* ---- CONTACT POINT-CLOUD CANVAS ----
+   Full-screen three.js layer that resolves the profile portrait as the
+   contact section scrolls into view. Sits above the dither + contact debris,
+   below the contact content panel and nav. Opacity is scroll-driven (JS). */
+#contact-cloud {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    z-index: 1;
+    pointer-events: none;
+    display: block;
+    opacity: 0;
+    transition: opacity 0.3s ease;
+}
+
+@media (prefers-reduced-motion: reduce) {
+    #contact-cloud {
+        transition: none;
+    }
+}
+
 a {
     color: var(--fg-bright);
     text-decoration: none;
@@ -1283,6 +1306,20 @@ a:hover {
     position: relative;
     z-index: 2;
     min-height: calc(100vh - 200px);
+}
+
+/* ---- Desktop two-column: block left, portrait stage right ----
+   The point-cloud portrait (js/contact-cloud.js) resolves in the right
+   portion of the viewport. The block is pushed left and capped so the
+   right side stays a dedicated, balanced stage for the portrait. */
+@media (min-width: 1024px) {
+    .contact-container {
+        justify-content: flex-start;
+    }
+
+    .contact-block--left {
+        max-width: min(680px, 46vw);
+    }
 }
 
 /* ---- Block ---- */
