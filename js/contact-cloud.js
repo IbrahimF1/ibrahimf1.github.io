@@ -90,6 +90,7 @@
     var renderer, scene, camera, mesh, material, uni;
     var inited = false;
     var imageLoaded = false;
+    var portraitWorldW = 0;   // resolved portrait width in world units (nCol * INSTANCE_SIZE)
     var rafId = null;
     var startTime = performance.now();
     var targetZ = reduceMotion ? TARGET_CAMERA_Z : INIT_CAMERA_Z;
@@ -341,6 +342,7 @@
         var imgAspect = imgW / imgH;
         var nRow = GRID_ROWS;
         var nCol = Math.max(1, Math.round(nRow * imgAspect));
+        portraitWorldW = nCol * INSTANCE_SIZE;
 
         // Sample the image down to the grid resolution.
         var can = document.createElement('canvas');
@@ -452,13 +454,20 @@
        parallax that smears the image (instances in a column no longer align).
        So the camera stays on the axis and we instead SHEAR the projection
        matrix — a lens shift — which offsets the whole framed view by a
-       uniform, depth-independent amount. Result: a sharp portrait framed
-       beside the contact block, with the camera never leaving the cloud.
+       uniform, depth-independent amount.
+
+       Composition: the contact block and the portrait SHARE the centre.
+       The block is flex-centred (its natural centre sits at viewport 0.5),
+       so we shift the whole pair left by (halfW − overlap/2) — exactly the
+       amount that centres the combined footprint of block + cloud. The
+       portrait's left edge then tucks a small overlap behind the block's
+       right edge (the block "goes over" the cloud) right at the midline.
        ═══════════════════════════════════════════════════════════ */
     function layoutPortrait() {
         if (!camera) return;
         var vw = window.innerWidth;
         var vh = window.innerHeight;
+        var aspect = vh ? vw / vh : 1;
 
         var centerFrac = 0.5;   // desired portrait centre, screen-x (0=left … 1=right)
         var centerYFrac = 0.5;  // desired portrait centre, screen-y (0=top … 1=bottom)
@@ -467,16 +476,41 @@
         var rect = block ? block.getBoundingClientRect() : null;
 
         if (vw >= 1024 && rect) {
-            var blockRight = rect.right / vw;
-            var pad = 0.04;
-            var regionStart = blockRight + pad;
-            var regionEnd = 1 - pad;
-            var regionW = Math.max(0, regionEnd - regionStart);
-            if (regionW >= 0.18) {
-                centerFrac = regionStart + regionW / 2;
-                if (centerFrac > 0.8) centerFrac = 0.8;
-            }
+            var blockW = rect.width / vw;
+
+            // Resolved on-screen half-width of the portrait (fraction of
+            // viewport). visibleWorldHeight at the resolve plane is
+            // 2 * TARGET_CAMERA_Z * tan(FOV/2); the visible world width is
+            // that times the aspect ratio.
+            var visibleH = 2 * TARGET_CAMERA_Z * Math.tan((FOV / 2) * Math.PI / 180);
+            var portraitWFrac = portraitWorldW ? portraitWorldW / (visibleH * aspect) : 0.36;
+            var halfW = portraitWFrac / 2;
+
+            // Overlap: how far the block's right edge covers the cloud's left
+            // edge (fraction of viewport).
+            var overlap = 0.06;
+
+            // Centre the GROUP (block + cloud). The block's natural centre is
+            // at 0.5, so shifting the pair left by (halfW − overlap/2) puts the
+            // midpoint of [block-left … cloud-right] exactly on the midline.
+            var shiftFrac = halfW - overlap / 2;
+            var blockRight = (0.5 + blockW / 2) - shiftFrac;
+
+            // Park the portrait so its left edge sits `overlap` behind the
+            // block's right edge.
+            centerFrac = blockRight + halfW - overlap;
+            // Keep the whole portrait on-screen.
+            if (centerFrac + halfW > 0.985) centerFrac = 0.985 - halfW;
+            if (centerFrac - halfW < 0.015) centerFrac = 0.015 + halfW;
+
             centerYFrac = (rect.top + rect.height / 2) / vh;
+
+            // Shift the block left to centre the pair. `left` is safe here:
+            // the entry animation drives transform/opacity (GSAP), never `left`.
+            block.style.left = (-shiftFrac * vw) + 'px';
+        } else if (block) {
+            // Clear the desktop offset on mobile / when disabling the pair layout.
+            block.style.left = '';
         }
 
         camera.updateProjectionMatrix();

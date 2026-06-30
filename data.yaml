@@ -235,10 +235,10 @@ contact:
       url: "mailto:ifaruquee1@gmail.com"
       value: "ifaruquee1@gmail.com"
     - label: "GITHUB::"
-      url: "#"
+      url: "https://github.com/IbrahimF1"
       value: "github.com/IbrahimF1"
     - label: "LINKEDIN::"
-      url: "#"
+      url: "https://www.linkedin.com/in/ibrahim-f1"
       value: "linkedin.com/in/ibrahim-f1"
   debris:
     - content: "}"

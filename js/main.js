@@ -545,6 +545,30 @@ function initAnimations(data) {
         const m = (desktopVal) => isMobile ? Math.round(desktopVal * 0.4) : desktopVal;
         const mf = (desktopVal) => isMobile ? desktopVal * 0.4 : desktopVal;
 
+        // Tracks every hover listener attached in this matchMedia context so the
+        // returned cleanup can remove them in one call (GSAP only auto-reverts
+        // animations/ScrollTriggers, not manual addEventListener calls).
+        const listenerSignal = new AbortController();
+        const on = (el, type, fn) => el.addEventListener(type, fn, { signal: listenerSignal.signal });
+        // Held so the contact IntersectionObserver can be disconnected on revert.
+        let contactObserver = null;
+
+        // ---- HONOR prefers-reduced-motion ----
+        // Show all content in its final static state and skip every pin/scrub
+        // animation so nothing moves on scroll. Most animated elements are
+        // visible by default in CSS (the entry timelines hide them via gsap.set
+        // before revealing them, so simply not running those keeps them visible).
+        // Only .contact-debris is opacity:0 by default in CSS, so reveal it
+        // explicitly at its intended resting opacity; draw the exp timeline fully.
+        if (reduceMotion) {
+            document.querySelectorAll('#contact .contact-debris').forEach((debris, i) => {
+                const entryProps = getContactDebrisEntryAnim(i + 1);
+                gsap.set(debris, { opacity: entryProps.opacity });
+            });
+            gsap.set('#expTimelineProgress', { height: '100%' });
+            return;
+        }
+
         // ---- HERO: DECONSTRUCT ON SCROLL ----
         const heroTl = gsap.timeline({
             scrollTrigger: {
@@ -632,7 +656,7 @@ function initAnimations(data) {
         // Only animates scale to avoid conflicting with scroll-driven rotation/opacity/x/y
         if (isDesktop && !reduceMotion) {
             document.querySelectorAll('.hero-social').forEach(icon => {
-                icon.addEventListener('mouseenter', () => {
+                on(icon, 'mouseenter', () => {
                     gsap.to(icon, {
                         scale: 1.25,
                         duration: 0.2,
@@ -641,7 +665,7 @@ function initAnimations(data) {
                     });
                 });
 
-                icon.addEventListener('mouseleave', () => {
+                on(icon, 'mouseleave', () => {
                     gsap.to(icon, {
                         scale: 1,
                         duration: 0.3,
@@ -835,10 +859,10 @@ function initAnimations(data) {
             document.querySelectorAll('.project-card').forEach(card => {
                 const overlay = card.querySelector('.project-card-overlay');
                 if (!overlay) return;
-                card.addEventListener('mouseenter', () => {
+                on(card, 'mouseenter', () => {
                     gsap.to(overlay, { y: -4, duration: 0.2, ease: 'power2.out', overwrite: 'auto' });
                 });
-                card.addEventListener('mouseleave', () => {
+                on(card, 'mouseleave', () => {
                     gsap.to(overlay, { y: 0, duration: 0.3, ease: 'power2.inOut', overwrite: 'auto' });
                 });
             });
@@ -946,12 +970,12 @@ function initAnimations(data) {
             document.querySelectorAll('.exp-card').forEach(card => {
                 const inner = card.querySelector('.exp-card-inner');
 
-                card.addEventListener('mouseenter', () => {
+                on(card, 'mouseenter', () => {
                     gsap.to(inner, { y: -4, duration: 0.2, ease: 'power2.out', overwrite: 'auto' });
                     gsap.to(card, { y: -2, duration: 0.2, ease: 'power2.out', overwrite: 'auto' });
                 });
 
-                card.addEventListener('mouseleave', () => {
+                on(card, 'mouseleave', () => {
                     gsap.to(inner, { y: 0, duration: 0.3, ease: 'power2.inOut', overwrite: 'auto' });
                     gsap.to(card, { y: 0, duration: 0.3, ease: 'power2.inOut', overwrite: 'auto' });
                 });
@@ -980,9 +1004,13 @@ function initAnimations(data) {
                 if (!isMobile && !reduceMotion) {
                     const debrisEls = document.querySelectorAll('#contact .contact-debris');
                     debrisEls.forEach((debris, i) => {
-                        const animProps = getContactDebrisEntryAnim(i + 1);
+                        // Animate ONLY opacity here; x/y/rotation are owned by the
+                        // scrub parallax below. Writing the same transform props from
+                        // both this one-shot entry and the continuous scrub caused a
+                        // visible stutter as #contact assembled.
+                        const { opacity: debrisOpacity } = getContactDebrisEntryAnim(i + 1);
                         tl.to(debris, {
-                            ...animProps,
+                            opacity: debrisOpacity,
                             duration: 0.5 + Math.random() * 0.4,
                             ease: 'power2.out'
                         }, i * 0.05);
@@ -1062,7 +1090,7 @@ function initAnimations(data) {
             }
 
             // IntersectionObserver
-            const observer = new IntersectionObserver((entries) => {
+            const observer = contactObserver = new IntersectionObserver((entries) => {
                 entries.forEach(entry => {
                     if (entry.isIntersecting && !hasAnimated) {
                         hasAnimated = true;
@@ -1149,50 +1177,50 @@ function initAnimations(data) {
             if (isDesktop) {
                 // Project cards
                 document.querySelectorAll('.project-card').forEach(card => {
-                    card.addEventListener('mouseenter', () => {
+                    on(card, 'mouseenter', () => {
                         window.bayerBg.setInteractive(0.6);
                     });
-                    card.addEventListener('mouseleave', () => {
+                    on(card, 'mouseleave', () => {
                         window.bayerBg.setInteractive(0);
                     });
                 });
 
                 // Experience cards
                 document.querySelectorAll('.exp-card').forEach(card => {
-                    card.addEventListener('mouseenter', () => {
+                    on(card, 'mouseenter', () => {
                         window.bayerBg.setInteractive(0.5);
                     });
-                    card.addEventListener('mouseleave', () => {
+                    on(card, 'mouseleave', () => {
                         window.bayerBg.setInteractive(0);
                     });
                 });
 
                 // Contact links
                 document.querySelectorAll('.contact-link').forEach(link => {
-                    link.addEventListener('mouseenter', () => {
+                    on(link, 'mouseenter', () => {
                         window.bayerBg.setInteractive(0.7);
                     });
-                    link.addEventListener('mouseleave', () => {
+                    on(link, 'mouseleave', () => {
                         window.bayerBg.setInteractive(0);
                     });
                 });
 
                 // Hero social icons
                 document.querySelectorAll('.hero-social').forEach(icon => {
-                    icon.addEventListener('mouseenter', () => {
+                    on(icon, 'mouseenter', () => {
                         window.bayerBg.setInteractive(0.4);
                     });
-                    icon.addEventListener('mouseleave', () => {
+                    on(icon, 'mouseleave', () => {
                         window.bayerBg.setInteractive(0);
                     });
                 });
 
                 // Nav links
                 document.querySelectorAll('.nav-link').forEach(link => {
-                    link.addEventListener('mouseenter', () => {
+                    on(link, 'mouseenter', () => {
                         window.bayerBg.setInteractive(0.3);
                     });
-                    link.addEventListener('mouseleave', () => {
+                    on(link, 'mouseleave', () => {
                         window.bayerBg.setInteractive(0);
                     });
                 });
@@ -1200,7 +1228,12 @@ function initAnimations(data) {
         }
 
         return () => {
-            // ScrollTrigger instances created inside matchMedia are auto-reverted
+            // ScrollTrigger instances created inside matchMedia are auto-reverted.
+            // Manual hover listeners and the contact IntersectionObserver are NOT;
+            // remove/disconnect them so resizing across the 600px breakpoint does
+            // not stack duplicate handlers.
+            listenerSignal.abort();
+            if (contactObserver) contactObserver.disconnect();
         };
     });
 }
@@ -1524,6 +1557,16 @@ window.addEventListener('resize', () => {
     clearTimeout(resizeTimer);
     resizeTimer = setTimeout(() => ScrollTrigger.refresh(), 250);
 });
+
+// ---- REFRESH SCROLLTRIGGER AFTER FONTS/IMAGES SETTLE ----
+// Triggers cache their start/end from live layout at creation. With font-display:
+// swap, custom fonts (and lazy images) reflow sections AFTER the ScrollTriggers
+// are built, leaving their positions stale until a resize. Recalculate once the
+// web fonts and full page have loaded.
+if (document.fonts && document.fonts.ready) {
+    document.fonts.ready.then(() => ScrollTrigger.refresh());
+}
+window.addEventListener('load', () => ScrollTrigger.refresh());
 
 // ---- BOOTSTRAP: LOAD YAML → GENERATE DOM → INIT ANIMATIONS ----
 (function bootstrap() {
