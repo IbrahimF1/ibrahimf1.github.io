@@ -779,13 +779,17 @@ function initAnimations(data) {
         });
 
         // --- Exit: alternating right, left, right... last card fades out up ---
+        // Exit start aligned to the enter timeline's end ('top 10%'). The
+        // previous 'top 15%' overlapped the enter range (top 55%→10%) and both
+        // timelines wrote autoAlpha to the same card, so the later-created exit
+        // won during the overlap and blinked cards straight to autoAlpha:0.
         projectCards.forEach((card, i) => {
             const keyframes = getProjectExitKeyframes(i, totalCards, isMobile);
 
             const tl = gsap.timeline({
                 scrollTrigger: {
                     trigger: card,
-                    start: 'top 15%',
+                    start: 'top 10%',
                     end: 'bottom -20%',
                     scrub: 1.5
                 }
@@ -971,12 +975,20 @@ function initAnimations(data) {
                 const inner = card.querySelector('.exp-card-inner');
 
                 on(card, 'mouseenter', () => {
-                    gsap.to(inner, { y: -4, duration: 0.2, ease: 'power2.out', overwrite: 'auto' });
+                    // inner lifts via yPercent (NOT y): the scroll-driven enter
+                    // timeline reveals inner by animating its `y` (20→0) and
+                    // `opacity` (0→1). Animating that same `y` here with
+                    // overwrite:'auto' stripped `y` off the scrub tween mid-reveal,
+                    // stranding the card's content at an offset/hidden state — most
+                    // often the LAST card (its staggered reveal starts latest, so a
+                    // navbar scroll-jump caught it mid-animation). yPercent composes
+                    // with y independently and isn't seen as a conflicting prop.
+                    gsap.to(inner, { yPercent: -2, duration: 0.2, ease: 'power2.out', overwrite: 'auto' });
                     gsap.to(card, { y: -2, duration: 0.2, ease: 'power2.out', overwrite: 'auto' });
                 });
 
                 on(card, 'mouseleave', () => {
-                    gsap.to(inner, { y: 0, duration: 0.3, ease: 'power2.inOut', overwrite: 'auto' });
+                    gsap.to(inner, { yPercent: 0, duration: 0.3, ease: 'power2.inOut', overwrite: 'auto' });
                     gsap.to(card, { y: 0, duration: 0.3, ease: 'power2.inOut', overwrite: 'auto' });
                 });
             });
@@ -1089,7 +1101,12 @@ function initAnimations(data) {
                 });
             }
 
-            // IntersectionObserver
+            // IntersectionObserver — threshold lowered (0.25 → 0.1) and the
+            // -10% bottom rootMargin removed. The previous config required 25%
+            // of the (>=100vh) contact section to be visible inside a viewport
+            // whose bottom 10% was shaved off; on shorter viewports that
+            // threshold was never crossed, leaving the whole section locked at
+            // opacity:0 with no second chance (the observer unobserved on play).
             const observer = contactObserver = new IntersectionObserver((entries) => {
                 entries.forEach(entry => {
                     if (entry.isIntersecting && !hasAnimated) {
@@ -1100,11 +1117,23 @@ function initAnimations(data) {
                     }
                 });
             }, {
-                threshold: 0.25,
-                rootMargin: '0px 0px -10% 0px'
+                threshold: 0.1,
+                rootMargin: '0px 0px 0px 0px'
             });
 
             observer.observe(contactSection);
+
+            // Safety net: if the section is already in view on init (e.g. the
+            // page was reloaded while scrolled to contact), the observer may not
+            // re-fire. Reveal immediately rather than risk a permanently hidden
+            // contact section. hasAnimated guards against a double-play.
+            const contactRect = contactSection.getBoundingClientRect();
+            if (contactRect.top < window.innerHeight * 0.9 && contactRect.bottom > 0 && !hasAnimated) {
+                hasAnimated = true;
+                masterTl = buildMasterTimeline();
+                masterTl.play();
+                observer.disconnect();
+            }
         })();
 
         // ---- GLOBAL: SECTION LABELS PARALLAX ----
@@ -1385,6 +1414,34 @@ function playStartupAnimation(data) {
         const origSocialRotation = Array.from(socialIcons).map(s => parseFloat(gsap.getProperty(s, 'rotation')));
         const origSocialOpacity = Array.from(socialIcons).map(s => parseFloat(gsap.getProperty(s, 'opacity')));
 
+        // ---- Recovery helper: always clear inline styles + unlock scroll ----
+        // Invoked on completion AND on any failure, so the page can never be
+        // left scroll-locked with hero/nav content stranded at opacity:0.
+        let finished = false;
+        let safetyTimer = null;
+        const finish = () => {
+            if (finished) return;
+            finished = true;
+            if (safetyTimer) clearTimeout(safetyTimer);
+            try {
+                const elementsToClear = [
+                    bgText, nameLine1, nameLine2, tagTop, tagBottom,
+                    bracketLeft, bracketRight,
+                    ...(debris ? Array.from(debris) : []),
+                    ...(socialIcons ? Array.from(socialIcons) : []),
+                    ...(socialFloats ? Array.from(socialFloats) : []),
+                    meta, glow, navBar
+                ].filter(Boolean);
+                gsap.set(elementsToClear, { clearProps: 'all' });
+            } catch (_) {}
+            document.documentElement.style.overflow = '';
+            document.body.style.overflow = '';
+            localStorage.setItem('portfolio_visited', 'true');
+            if (overlay) overlay.remove();
+            resolve();
+        };
+
+        try {
         // ---- Set initial hidden states ----
         gsap.set(bgText, { scale: 0.2, opacity: 0, transformOrigin: 'center center' });
         gsap.set(nameLine1, { rotateX: -90, scale: 0.4, opacity: 0, transformOrigin: 'center center', transformPerspective: 800 });
@@ -1413,25 +1470,7 @@ function playStartupAnimation(data) {
         gsap.set(navBar, { y: -60, opacity: 0 });
 
         // ---- Build the timeline ----
-        const tl = gsap.timeline({
-            onComplete: () => {
-                // Clear all inline styles so CSS takes over for scroll animations
-                const elementsToClear = [bgText, nameLine1, nameLine2, tagTop, tagBottom,
-                    bracketLeft, bracketRight, ...debris, ...socialIcons, ...socialFloats, meta, glow, navBar]
-                    .filter(Boolean);
-                gsap.set(elementsToClear, { clearProps: 'all' });
-
-                // ---- Unlock scroll ----
-                document.documentElement.style.overflow = '';
-                document.body.style.overflow = '';
-
-                // Mark as visited so animation is skipped on return visits
-                localStorage.setItem('portfolio_visited', 'true');
-
-                if (overlay) overlay.remove();
-                resolve();
-            }
-        });
+        const tl = gsap.timeline({ onComplete: finish });
 
         // ---- Phase 1: Overlay expands from center ----
         tl.to(overlay, {
@@ -1548,6 +1587,23 @@ function playStartupAnimation(data) {
             duration: 1.2,
             ease: 'power2.inOut'
         }, 2.4);
+
+        // Safety net: if the timeline is somehow interrupted and onComplete
+        // never fires, force-finish so the page is never left scroll-locked
+        // with invisible hero/nav content.
+        safetyTimer = setTimeout(finish, 10000);
+        } catch (err) {
+            console.error('Startup animation failed, recovering:', err);
+            // Broad clearProps via selectors in case specific refs are undefined
+            try {
+                gsap.set([
+                    '.hero-bg-text', '.hero-name-line', '.hero-tag--top', '.hero-tag--bottom',
+                    '.hero-bracket--left', '.hero-bracket--right', '.hero-debris', '.hero-social',
+                    '.hero-social-float', '.hero-meta', '.hero-glow', '.nav-bar'
+                ], { clearProps: 'all' });
+            } catch (_) {}
+            finish();
+        }
     });
 }
 
@@ -1567,6 +1623,26 @@ if (document.fonts && document.fonts.ready) {
     document.fonts.ready.then(() => ScrollTrigger.refresh());
 }
 window.addEventListener('load', () => ScrollTrigger.refresh());
+
+// ---- REFRESH SCROLLTRIGGER WHEN LAZY IMAGES LOAD ----
+// <img loading="lazy"> on project/experience cards (and diary plates) decode
+// AFTER window.load, shifting section heights. Each load invalidates the
+// ScrollTrigger positions measured at creation, trapping cards in their hidden
+// initial state. Debounce-refresh on each load (and on error, in case a broken
+// image still changes layout before settling).
+function refreshOnLazyImages() {
+    if (typeof ScrollTrigger === 'undefined') return;
+    let imgRefreshTimer;
+    document.querySelectorAll('img[loading="lazy"]').forEach(img => {
+        if (img.complete && img.naturalWidth > 0) return;
+        const onLoad = () => {
+            clearTimeout(imgRefreshTimer);
+            imgRefreshTimer = setTimeout(() => ScrollTrigger.refresh(), 200);
+        };
+        img.addEventListener('load', onLoad, { once: true });
+        img.addEventListener('error', onLoad, { once: true });
+    });
+}
 
 // ---- BOOTSTRAP: LOAD YAML → GENERATE DOM → INIT ANIMATIONS ----
 (function bootstrap() {
@@ -1634,6 +1710,9 @@ window.addEventListener('load', () => ScrollTrigger.refresh());
             // Play startup animation, then initialize scroll animations
             playStartupAnimation(data).then(() => {
                 initAnimations(data);
+                // Lazy-loaded images reflow sections AFTER ScrollTriggers are
+                // built; refresh once each finishes loading.
+                refreshOnLazyImages();
             });
         })
         .catch(err => {
