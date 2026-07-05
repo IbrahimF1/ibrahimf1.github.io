@@ -1,13 +1,10 @@
 /**
  * Bayer Diamond Dithering — WebGL2 Full-Screen Animated Background
- * Section-Aware Organic Morphing Edition
  *
  * Visual features:
  *  – 8×8 Bayer ordered-dithering with diamond-shaped pixel masks
  *  – Domain-warped fBm noise for organic pattern morphing
- *  – Section-aware color profiles that shift with scroll position
- *  – Dynamic pattern density, flow direction, and speed per section
- *  – Seamless visual bridging between sections via smooth interpolation
+ *  – Single global colour/density/scale/flow profile (consistent across sections)
  *  – Scroll velocity response for reactive pattern behaviour
  *  – Interactive element synchronization (hover states, card focus)
  *  – Mouse-tracking glow that subtly shifts the pattern
@@ -15,10 +12,9 @@
  *  – Respects prefers-reduced-motion
  *
  * Public API (window.bayerBg):
- *  – setSection(index)        — force active section (0–4)
  *  – setInteractive(state)    — boost glow from interactive elements (0–1)
  *  – setScrollVelocity(v)     — feed scroll velocity for pattern response
- *  – setSectionProgress(p)    — fine-grained section blend progress (0–4)
+ *  – setSection / setSectionProgress — legacy no-ops (kept for main.js compat)
  */
 (function () {
   'use strict';
@@ -31,73 +27,30 @@
   var MOUSE_LERP      = 0.04;
   var DPR_CAP         = 2;
   var ANIM_SPEED      = 0.05;
-  var SCROLL_LERP     = 0.06;   // smoothing for scroll-driven values
   var VELOCITY_LERP   = 0.03;   // smoothing for scroll velocity
   var VELOCITY_DECAY  = 0.92;   // velocity decay per frame
 
-  /* ── Section visual profiles ──────────────────────────────
-     Each profile defines the dither behaviour for a section.
-     Colors are [r, g, b] in 0–1 range.
+  /* ── Global dither profile ───────────────────────────────
+     A single, scroll-invariant set of visual parameters applied
+     to every section. Colors are [r, g, b] in 0–1 range.
      density  – multiplier for dither threshold offset (pattern fill)
      scale    – noise frequency multiplier (pattern granularity)
      speed    – fBm animation speed multiplier
      flowX/Y  – directional drift of the noise field
-     opacity  – base dither opacity for this section
+     opacity  – base dither opacity
      warm     – colour A (primary warm tone)
      cool     – colour B (secondary cooler tone)
      ────────────────────────────────────────────────────────── */
-  var SECTION_PROFILES = [
-    { // 0 — Hero: warm amber, medium density, slow organic flow
-      warm: [0.77, 0.63, 0.38],    // #c4a060
-      cool: [0.48, 0.42, 0.31],    // #7a6a50
-      density:  0.50,
-      scale:    1.0,
-      speed:    1.0,
-      flowX:    0.0,
-      flowY:    0.15,
-      opacity:  0.22
-    },
-    { // 1 — About: cooler muted, lower density, gentle horizontal drift
-      warm: [0.62, 0.58, 0.48],    // #9e947a
-      cool: [0.40, 0.38, 0.32],    // #666052
-      density:  0.35,
-      scale:    0.8,
-      speed:    0.7,
-      flowX:    0.2,
-      flowY:    0.05,
-      opacity:  0.16
-    },
-    { // 2 — Projects: warmer saturated, higher density, dynamic swirl
-      warm: [0.82, 0.65, 0.35],    // #d1a65a
-      cool: [0.55, 0.45, 0.28],    // #8c7347
-      density:  0.65,
-      scale:    1.3,
-      speed:    1.4,
-      flowX:    0.15,
-      flowY:    -0.1,
-      opacity:  0.26
-    },
-    { // 3 — Experience: neutral steady, medium density, vertical flow
-      warm: [0.68, 0.60, 0.44],    // #ae9970
-      cool: [0.44, 0.40, 0.33],    // #706654
-      density:  0.45,
-      scale:    0.9,
-      speed:    0.8,
-      flowX:    -0.1,
-      flowY:    0.2,
-      opacity:  0.18
-    },
-    { // 4 — Contact: brightest warm, increasing density, convergent
-      warm: [0.85, 0.72, 0.45],    // #d9b873
-      cool: [0.58, 0.50, 0.35],    // #948059
-      density:  0.55,
-      scale:    1.1,
-      speed:    1.2,
-      flowX:    0.0,
-      flowY:    -0.15,
-      opacity:  0.24
-    }
-  ];
+  var PROFILE = {
+    warm:    [0.77, 0.63, 0.38],   // #c4a060
+    cool:    [0.48, 0.42, 0.31],   // #7a6a50
+    density: 0.50,
+    scale:   1.0,
+    speed:   1.0,
+    flowX:   0.0,
+    flowY:   0.15,
+    opacity: 0.22
+  };
 
   /* ═══════════════════════════════════════════════════════════
      CANVAS CREATION
@@ -165,7 +118,6 @@
     '// Dynamic response uniforms',
     'uniform float uScrollVelocity;',  // scroll speed for reactive morphing
     'uniform float uInteractive;',     // interactive element glow boost
-    'uniform float uSectionBlend;',    // transition intensity (0=stable, 1=boundary)
     '',
     'out vec4 fragColor;',
     '',
@@ -289,11 +241,8 @@
     '  float interGlow = exp(-mDist * 3.5) * uInteractive * 0.20;',
     '',
     '  /* ── Organic morphing via domain warping ─────────── */',
-    '  // Morph intensity increases with scroll velocity and section transitions',
-    '  float baseMorph = 0.12;',
-    '  float velocityMorph = abs(uScrollVelocity) * 0.8;',
-    '  float transitionMorph = uSectionBlend * 0.25;',
-    '  float morphAmt = baseMorph + velocityMorph + transitionMorph;',
+    '  // Morph intensity increases with scroll velocity',
+    '  float morphAmt = 0.12 + abs(uScrollVelocity) * 0.8;',
     '',
     '  float feed = warpedFbm(scaledUV + uMouse * 0.04, uTime * uFlowSpeed, 1.0, morphAmt);',
     '',
@@ -313,14 +262,10 @@
     '  /* ── Diamond mask ────────────────────────────────── */',
     '  float M = maskDiamond(pixelUV, bw);',
     '',
-    '  /* ── Gradient colour (shifts over time + section blend) ─ */',
+    '  /* ── Gradient colour (shifts over time) ─────────── */',
     '  float gt  = uv.x * 0.3 + uv.y * 0.3 + sin(uTime * 0.03) * 0.5 + 0.5;',
     '  vec3  col = mix(uColorA, uColorB, gt);',
-    '',
-    '  // Subtle colour shift at section boundaries for visual bridging',
-    '  float bridgePulse = sin(uTime * 0.5) * 0.5 + 0.5;',
-    '  col += uSectionBlend * 0.06 * bridgePulse * vec3(0.1, 0.08, 0.05);',
-    '',
+
     '  /* ── Vignette (keeps centre readable) ────────────── */',
     '  vec2  vUv = gl_FragCoord.xy / uResolution;',
     '  float vig = 1.0 - length((vUv - 0.5) * 1.4);',
@@ -377,7 +322,7 @@
     'uResolution', 'uTime', 'uMouse', 'uPixelSize', 'uBgColor',
     'uColorA', 'uColorB', 'uDitherOpacity', 'uDensity',
     'uNoiseScale', 'uFlowSpeed', 'uFlowDir',
-    'uScrollVelocity', 'uInteractive', 'uSectionBlend'
+    'uScrollVelocity', 'uInteractive'
   ].forEach(function (name) {
     loc[name] = gl.getUniformLocation(prog, name);
   });
@@ -436,172 +381,26 @@
   });
 
   /* ═══════════════════════════════════════════════════════════
-     SECTION TRACKING & INTERPOLATION
+     DYNAMIC INPUT SMOOTHING
      ═══════════════════════════════════════════════════════════ */
 
-  // Current interpolated section state (smoothly animated)
-  var sectionState = {
-    colorA:        SECTION_PROFILES[0].warm.slice(),
-    colorB:        SECTION_PROFILES[0].cool.slice(),
-    density:       SECTION_PROFILES[0].density,
-    noiseScale:    SECTION_PROFILES[0].scale,
-    flowSpeed:     SECTION_PROFILES[0].speed,
-    flowDirX:      SECTION_PROFILES[0].flowX,
-    flowDirY:      SECTION_PROFILES[0].flowY,
-    opacity:       SECTION_PROFILES[0].opacity,
-    scrollVelocity: 0.0,
-    interactive:   0.0,
-    sectionBlend:  0.0
-  };
-
-  // Target state (set by scroll position, snapped to section profiles)
-  var targetState = {
-    colorA:        SECTION_PROFILES[0].warm.slice(),
-    colorB:        SECTION_PROFILES[0].cool.slice(),
-    density:       SECTION_PROFILES[0].density,
-    noiseScale:    SECTION_PROFILES[0].scale,
-    flowSpeed:     SECTION_PROFILES[0].speed,
-    flowDirX:      SECTION_PROFILES[0].flowX,
-    flowDirY:      SECTION_PROFILES[0].flowY,
-    opacity:       SECTION_PROFILES[0].opacity,
-    sectionBlend:  0.0
-  };
-
   // External input targets (set via public API)
-  var extInteractive   = 0.0;
+  var extInteractive    = 0.0;
   var extScrollVelocity = 0.0;
 
-  // Section elements — cached after DOM is ready
-  var sectionElements = null;
-  var sectionCount = SECTION_PROFILES.length;
-
-  function cacheSectionElements() {
-    var ids = ['hero', 'about', 'projects', 'experience', 'contact'];
-    sectionElements = ids.map(function (id) {
-      return document.getElementById(id);
-    }).filter(Boolean);
-    sectionCount = sectionElements.length;
-  }
-
-  // Attempt to cache immediately; also retry after DOMContentLoaded
-  if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', cacheSectionElements);
-  } else {
-    cacheSectionElements();
-  }
+  // Smoothed dynamic values (driven by scroll velocity & interactive state)
+  var smoothInteractive    = 0.0;
+  var smoothScrollVelocity = 0.0;
 
   /**
-   * Compute which section the viewport centre is over,
-   * and a blend factor for transitions.
-   * Returns { index, blend, progress }
-   *   index  — dominant section index (0-based)
-   *   blend  — 0.0 when centred on a section, approaches 1.0 at boundaries
-   *   progress — continuous 0–sectionCount value representing scroll position
+   * Smooth the dynamic inputs (scroll velocity & interactive glow)
+   * toward their external targets. Profile values are constant, so
+   * only these two reactive channels need per-frame smoothing.
    */
-  function computeSectionFromScroll() {
-    if (!sectionElements || sectionElements.length === 0) {
-      return { index: 0, frac: 0, sectionBlend: 0, progress: 0 };
-    }
-
-    var scrollY = window.scrollY || window.pageYOffset;
-    var totalScroll = document.documentElement.scrollHeight - window.innerHeight;
-
-    // Normalised scroll progress across the entire page
-    var scrollNorm = totalScroll > 0 ? scrollY / totalScroll : 0;
-
-    // Map to section-space (0 to sectionCount)
-    var progress = scrollNorm * sectionCount;
-
-    // Determine dominant section index
-    var idx = Math.min(Math.floor(progress), sectionCount - 1);
-
-    // Fractional position within the current section (0–1)
-    var frac = progress - idx;
-
-    // Section blend: transition intensity for shader effects
-    // Peaks mid-section, zero at boundaries — matches setSectionProgress formula
-    var sectionBlend = (frac > 0.1 && frac < 0.9)
-      ? Math.sin(frac * Math.PI)
-      : 0;
-
-    // If we're past the last section, clamp
-    if (idx >= sectionCount - 1) {
-      sectionBlend = 0;
-    }
-
-    return { index: idx, frac: frac, sectionBlend: sectionBlend, progress: progress };
-  }
-
-  /**
-   * Blend two section profiles together based on a factor t (0–1).
-   * Writes result into targetState.
-   */
-  function blendProfiles(profileA, profileB, t) {
-    for (var i = 0; i < 3; i++) {
-      targetState.colorA[i] = profileA.warm[i] * (1 - t) + profileB.warm[i] * t;
-      targetState.colorB[i] = profileA.cool[i] * (1 - t) + profileB.cool[i] * t;
-    }
-    targetState.density    = profileA.density  * (1 - t) + profileB.density  * t;
-    targetState.noiseScale = profileA.scale    * (1 - t) + profileB.scale    * t;
-    targetState.flowSpeed  = profileA.speed    * (1 - t) + profileB.speed    * t;
-    targetState.flowDirX   = profileA.flowX    * (1 - t) + profileB.flowX    * t;
-    targetState.flowDirY   = profileA.flowY    * (1 - t) + profileB.flowY    * t;
-    targetState.opacity    = profileA.opacity  * (1 - t) + profileB.opacity  * t;
-  }
-
-  /**
-   * Update target section state based on current scroll position.
-   * Called every frame before rendering.
-   */
-  function updateSectionTarget() {
-    var info = computeSectionFromScroll();
-    var idx = info.index;
-    var frac = info.frac;
-
-    // Blend between adjacent sections using fractional progress (matches setSectionProgress)
-    if (frac > 0.01 && idx < sectionCount - 1) {
-      blendProfiles(SECTION_PROFILES[idx], SECTION_PROFILES[idx + 1], frac);
-    } else {
-      var p = SECTION_PROFILES[idx];
-      for (var i = 0; i < 3; i++) {
-        targetState.colorA[i] = p.warm[i];
-        targetState.colorB[i] = p.cool[i];
-      }
-      targetState.density    = p.density;
-      targetState.noiseScale = p.scale;
-      targetState.flowSpeed  = p.speed;
-      targetState.flowDirX   = p.flowX;
-      targetState.flowDirY   = p.flowY;
-      targetState.opacity    = p.opacity;
-    }
-
-    // Update section blend target (will be lerped smoothly)
-    targetState.sectionBlend = info.sectionBlend;
-  }
-
-  /**
-   * Smoothly interpolate sectionState toward targetState.
-   */
-  function lerpSectionState(dt) {
-    var t = 1.0 - Math.pow(1.0 - SCROLL_LERP, dt * 60);
-
-    for (var i = 0; i < 3; i++) {
-      sectionState.colorA[i] += (targetState.colorA[i] - sectionState.colorA[i]) * t;
-      sectionState.colorB[i] += (targetState.colorB[i] - sectionState.colorB[i]) * t;
-    }
-    sectionState.density     += (targetState.density     - sectionState.density)     * t;
-    sectionState.noiseScale  += (targetState.noiseScale  - sectionState.noiseScale)  * t;
-    sectionState.flowSpeed   += (targetState.flowSpeed   - sectionState.flowSpeed)   * t;
-    sectionState.flowDirX    += (targetState.flowDirX    - sectionState.flowDirX)    * t;
-    sectionState.flowDirY    += (targetState.flowDirY    - sectionState.flowDirY)    * t;
-    sectionState.opacity     += (targetState.opacity     - sectionState.opacity)     * t;
-    sectionState.sectionBlend += (targetState.sectionBlend - sectionState.sectionBlend) * t;
-
-    // Smooth external inputs
-    sectionState.interactive += (extInteractive - sectionState.interactive) * VELOCITY_LERP * dt * 60;
-
-    // Scroll velocity with decay
-    sectionState.scrollVelocity += (extScrollVelocity - sectionState.scrollVelocity) * VELOCITY_LERP * dt * 60;
+  function updateDynamicInputs(dt) {
+    var k = VELOCITY_LERP * dt * 60;
+    smoothInteractive    += (extInteractive    - smoothInteractive)    * k;
+    smoothScrollVelocity += (extScrollVelocity - smoothScrollVelocity) * k;
     extScrollVelocity *= VELOCITY_DECAY;
   }
 
@@ -620,7 +419,7 @@
     var vh = window.innerHeight || 1;
     scrollVelocity = delta / vh;
 
-    // Feed to external target (will be smoothed in lerpSectionState)
+    // Feed to external target (will be smoothed in updateDynamicInputs)
     extScrollVelocity = Math.max(extScrollVelocity, Math.min(Math.abs(scrollVelocity) * 5.0, 1.0));
   }
 
@@ -632,21 +431,11 @@
   window.bayerBg = {
     /**
      * Force the active section index (0–4).
-     * Useful when main.js has better section detection via ScrollTrigger.
+     * No-op: the dither profile is now global and scroll-invariant.
+     * Kept for backward compatibility with main.js.
      */
     setSection: function (index) {
-      var idx = Math.max(0, Math.min(index, sectionCount - 1));
-      var p = SECTION_PROFILES[idx];
-      for (var i = 0; i < 3; i++) {
-        targetState.colorA[i] = p.warm[i];
-        targetState.colorB[i] = p.cool[i];
-      }
-      targetState.density    = p.density;
-      targetState.noiseScale = p.scale;
-      targetState.flowSpeed  = p.speed;
-      targetState.flowDirX   = p.flowX;
-      targetState.flowDirY   = p.flowY;
-      targetState.opacity    = p.opacity;
+      // intentionally empty — single global profile, nothing to switch
     },
 
     /**
@@ -667,12 +456,11 @@
 
     /**
      * Set fine-grained section progress (continuous 0–4).
-     * Overrides scroll-based section detection when called.
+     * No-op: the dither profile is now global and scroll-invariant.
+     * Kept for backward compatibility with main.js.
      */
     setSectionProgress: function (progress) {
-      // Delegate to updateSectionTarget which reads scroll position directly.
-      // This ensures consistent blend calculations between external and internal mode.
-      // Kept for API compatibility with main.js.
+      // intentionally empty — single global profile, nothing to blend
     }
   };
 
@@ -695,11 +483,8 @@
 
     var elapsed = (now - t0) * 0.001;
 
-    // Always update section target from current scroll position
-    updateSectionTarget();
-
-    // Smoothly interpolate all section state
-    lerpSectionState(dt);
+    // Smooth dynamic inputs (scroll velocity & interactive glow)
+    updateDynamicInputs(dt);
 
     gl.clear(gl.COLOR_BUFFER_BIT);
 
@@ -707,23 +492,22 @@
     gl.uniform1f(loc.uTime, elapsed);
     gl.uniform2f(loc.uMouse, smoothMX, smoothMY);
 
-    // Section-blended uniforms
-    gl.uniform3f(loc.uColorA, sectionState.colorA[0], sectionState.colorA[1], sectionState.colorA[2]);
-    gl.uniform3f(loc.uColorB, sectionState.colorB[0], sectionState.colorB[1], sectionState.colorB[2]);
-    gl.uniform1f(loc.uDitherOpacity, sectionState.opacity);
-    gl.uniform1f(loc.uDensity, sectionState.density);
-    gl.uniform1f(loc.uNoiseScale, sectionState.noiseScale);
-    gl.uniform1f(loc.uFlowSpeed, sectionState.flowSpeed * baseAnimSpeed);
-    gl.uniform2f(loc.uFlowDir, sectionState.flowDirX, sectionState.flowDirY);
+    // Global profile uniforms (constant across all sections)
+    gl.uniform3f(loc.uColorA, PROFILE.warm[0], PROFILE.warm[1], PROFILE.warm[2]);
+    gl.uniform3f(loc.uColorB, PROFILE.cool[0], PROFILE.cool[1], PROFILE.cool[2]);
+    gl.uniform1f(loc.uDitherOpacity, PROFILE.opacity);
+    gl.uniform1f(loc.uDensity, PROFILE.density);
+    gl.uniform1f(loc.uNoiseScale, PROFILE.scale);
+    gl.uniform1f(loc.uFlowSpeed, PROFILE.speed * baseAnimSpeed);
+    gl.uniform2f(loc.uFlowDir, PROFILE.flowX, PROFILE.flowY);
 
     // Dynamic response uniforms
-    gl.uniform1f(loc.uScrollVelocity, sectionState.scrollVelocity);
-    gl.uniform1f(loc.uInteractive, sectionState.interactive);
-    gl.uniform1f(loc.uSectionBlend, sectionState.sectionBlend);
+    gl.uniform1f(loc.uScrollVelocity, smoothScrollVelocity);
+    gl.uniform1f(loc.uInteractive, smoothInteractive);
 
     gl.drawArrays(gl.TRIANGLES, 0, 3);
     requestAnimationFrame(frame);
   })();
 
-  console.log('[bayer-bg] ✓ WebGL2 section-aware Bayer diamond dithering initialized');
+  console.log('[bayer-bg] ✓ WebGL2 Bayer diamond dithering initialized');
 })();
