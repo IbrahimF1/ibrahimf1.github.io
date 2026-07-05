@@ -698,6 +698,7 @@
                 uni.uMouse.value.y += (apiState.mouseY - uni.uMouse.value.y) * 0.06;
             }
 
+            layoutPortrait();
             renderer.render(scene, camera);
         };
         rafId = requestAnimationFrame(loop);
@@ -711,6 +712,7 @@
         if (renderer && scene && camera && imageLoaded && uni) {
             uni.uTime.value = (performance.now() - startTime) * 0.001;
             uni.uProgress.value = 1;   // reduced-motion always shows the resolved portrait
+            layoutPortrait();
             renderer.render(scene, camera);
         }
     }
