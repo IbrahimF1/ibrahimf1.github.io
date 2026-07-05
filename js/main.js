@@ -1136,6 +1136,11 @@ function initAnimations(data) {
             }
         })();
 
+        // ---- CONTACT POINT-CLOUD ----
+        // The ASCII portrait now self-triggers a one-shot "Bayer ink reveal"
+        // the moment #contact is fully framed in the viewport (handled inside
+        // js/contact-cloud.js). main.js no longer drives the cloud's progress.
+
         // ---- GLOBAL: SECTION LABELS PARALLAX ----
         gsap.utils.toArray('.section-label').forEach(label => {
             gsap.to(label, {

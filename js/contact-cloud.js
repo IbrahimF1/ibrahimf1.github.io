@@ -2,31 +2,33 @@
  * Contact Section — 3D ASCII Point-Cloud Portrait
  *
  * Renders assets/profile_pic.png (transparent) as a cloud of camera-facing
- * ASCII glyphs scattered along the camera axis. As the user scrolls into the
- * contact section the camera retreats out of the cloud and the portrait
- * resolves into a crisp field of monospace characters — a scroll-driven
- * "assembly" effect behind the contact panel.
+ * ASCII glyphs at the resolve plane. When the contact section becomes fully
+ * framed in the viewport, a one-shot "Bayer ink reveal" animation grows each
+ * glyph in Bayer-threshold order — ink saturating a dithered print — until
+ * the portrait resolves fully. The camera is pinned at the resolve plane for
+ * the whole reveal (no scroll-driven dolly, no scroll-driven progress).
  *
  * Design notes:
- *  – Adapted from the classic three.js instanced-image technique. The image is
- *    sampled into an offscreen canvas; only OPAQUE pixels become instances, so
- *    the transparent background of the PNG stays empty (the site dither shows
- *    through behind the silhouette).
- *  – PHASE 1 (this revision): cubes are replaced by camera-facing ASCII
- *    billboards. Each instance picks a glyph from a luminance ramp rendered in
- *    the site's "Space Mono" face, while its COLOR is the original photo RGB
- *    (the palette is intentionally untouched). A Bayer occupancy gate (ported
- *    from favicon.js) thins the grid into negative-space halftone, and a
- *    depth-weighted alpha gives the scattered cloud atmosphere.
- *  – The whole-page scroll mapping of the original is rebound to the contact
- *    section's own scroll progress (the finale of the page).
+ *  – Adapted from the classic three.js instanced-image technique. The image
+ *    is sampled into an offscreen canvas; only OPAQUE pixels become
+ *    instances, so the transparent background of the PNG stays empty.
+ *  – Each instance is a camera-facing ASCII billboard carrying its original
+ *    photo RGB; the glyph is picked from a luminance ramp rendered in the
+ *    site's "Space Mono" face. A Bayer occupancy gate thins the grid into
+ *    negative-space halftone, and a depth-weighted alpha gives atmosphere.
+ *  – The reveal is a single IntersectionObserver-triggered tween: progress
+ *    eases 0 → 1 over REVEAL_DURATION ms. Each glyph scales in over a narrow
+ *    ±0.03 window centred on its Bayer threshold, so the portrait assembles
+ *    in dither order rather than in lockstep. The tween advances by real
+ *    frame delta-time, so scrolling away mid-reveal pauses it cleanly and
+ *    scrolling back resumes exactly where it left off.
  *  – Three.js is lazy-loaded from a CDN only when the contact section is
  *    approached, so users who never reach contact pay no cost.
  *  – Rendering is gated to the contact viewport and paused otherwise.
- *  – Respects prefers-reduced-motion (renders the resolved portrait statically).
- *  – window.contactCloud exposes setProgress/setVelocity/setInteractive/
- *    setMouse so main.js can drive the cloud in later phases (mirrors the
- *    window.bayerBg pattern). Until then a self-contained scroll path drives it.
+ *  – Respects prefers-reduced-motion (renders the resolved portrait
+ *    statically the moment the section is reached).
+ *  – window.contactCloud exposes setVelocity/setInteractive/setMouse for
+ *    optional reactive (non-reveal) effects driven by main.js.
  */
 (function () {
     'use strict';
@@ -40,27 +42,17 @@
     var GRID_ROWS       = 180;                        // sampling resolution (image height)
     var INSTANCE_SIZE   = 1;                          // grid cell size in world units
     var FOV             = 75;
-    var TARGET_CAMERA_Z = 180;                        // camera z at which the image resolves (also sizes it)
-    var INIT_CAMERA_Z   = TARGET_CAMERA_Z / 5;        // camera z while inside the cloud
+    var TARGET_CAMERA_Z = 180;                        // camera z at the resolve plane (also sizes it)
     var RAND_RANGE_Z    = 2 * TARGET_CAMERA_Z * 0.2; // depth spread of the instances
     var ALPHA_THRESHOLD = 20;                         // discard pixels below this alpha
-    var CAMERA_LERP     = 0.08;                       // smoothing for scroll-driven camera
-    var EARLY_MARGIN    = '300px 0px 300px 0px';      // pre-load when contact is near
+    var EARLY_MARGIN    = '400px 0px 400px 0px';      // pre-load before contact reaches viewport
+    var REVEAL_DURATION = 2000;                       // ms — one-shot ink-reveal tween
+    var TRIGGER_TOLERANCE = 0.95;                     // "fully in view" leniency (0..1)
 
-    /* ── Phase 1 ASCII / look tuning ───────────────────────────
-       RAMP          – luminance ramp rendered in Space Mono (index 0 = sparsest)
-       ATLAS_CELL    – per-glyph atlas cell size (px); atlas is a horizontal strip
-       GLYPH_WORLD   – quad edge length as a fraction of the grid cell (leaves
-                       negative space so glyphs read as characters, not a solid block)
-       BAYER_MIN/MAX – occupancy gate range (luminance-modulated). A pixel is kept
-                       only when bayerThreshold(j,i) <= gate. Keeps features dense,
-                       thins shadows to negative-space dither.
-       FADE_NEAR/FAR – depth-alpha curve (0..1, relative to the depth spread).
-                       Near instances opaque, far ones fade out. Alpha only.
-       ────────────────────────────────────────────────────────── */
+    /* ── ASCII / look tuning ──────────────────────────────────── */
     var RAMP            = '.:-=+*#%@█';  // sparse -> dense; solid block = darkest ink
     var ATLAS_CELL      = 64;
-    var ATLAS_FONT_RATIO = 1.0;          // glyph ink fill within its atlas cell
+    var ATLAS_FONT_RATIO = 1.0;           // glyph ink fill within its atlas cell
     var GLYPH_WORLD     = 1.3;            // quad scale (bigger, slightly overlapping glyphs)
     var BAYER_MIN_GATE  = 1.0;            // A3 thinning disabled (was too sparse)
     var BAYER_MAX_GATE  = 1.0;
@@ -70,9 +62,9 @@
     // ASCII color contrast (lifts a dark subject into visibility). Applied in
     // the fragment shader after the atlas alpha: gamma lifts shadows, contrast
     // steepens midtones, brightness is a global offset.
-    var ASCII_GAMMA      = 0.6;          // <1 lifts shadows (raised → dimmer shadows)
-    var ASCII_CONTRAST   = 2;           // >1 steepens midtones
-    var ASCII_BRIGHTNESS = 0.08;           // global lift (lowered)
+    var ASCII_GAMMA      = 0.6;
+    var ASCII_CONTRAST   = 2;
+    var ASCII_BRIGHTNESS = 0.08;
 
     var reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 
@@ -93,18 +85,20 @@
     var portraitWorldW = 0;   // resolved portrait width in world units (nCol * INSTANCE_SIZE)
     var rafId = null;
     var startTime = performance.now();
-    var targetZ = reduceMotion ? TARGET_CAMERA_Z : INIT_CAMERA_Z;
+    var lastFrameTime = startTime;
 
-    // Shader-facing state (lerped toward these each frame)
+    // Reveal state: linearProgress advances by real frame dt (so it pauses
+    // cleanly when the render loop is gated off-screen), and curProgress is
+    // the easeInOut-shaped value the shader actually consumes.
+    var linearProgress = 0;
     var curProgress = 0;
-    var externalProgress = false;
+    var revealStarted = false;
     var apiState = { velocity: 0, interactive: 0, mouseX: 0.5, mouseY: 0.5 };
 
     /* ═══════════════════════════════════════════════════════════
        PERSPECTIVE HELPER
        Places an instance at depth `targetZ` so that, viewed from camera z = d,
        it projects to the correct on-screen position with correct size.
-       (Carried over from the reference implementation.)
        ═══════════════════════════════════════════════════════════ */
     function project(x, y, targetZ) {
         var h = 0.5;
@@ -118,7 +112,6 @@
     /* ═══════════════════════════════════════════════════════════
        COLOR / DITHER HELPERS  (ported from favicon.js)
        ═══════════════════════════════════════════════════════════ */
-    // WCAG 2.x relative luminance for 0..1 RGB.
     function luminance01(r, g, b) {
         var ch = function (c) { return c <= 0.03928 ? c / 12.92 : Math.pow((c + 0.055) / 1.055, 2.4); };
         return 0.2126 * ch(r) + 0.7152 * ch(g) + 0.0722 * ch(b);
@@ -138,6 +131,10 @@
     }
 
     function clamp01(v) { return v < 0 ? 0 : (v > 1 ? 1 : v); }
+    function smoothstep(t) { t = clamp01(t); return t * t * (3 - 2 * t); }
+    function easeInOut(t) {
+        return t < 0.5 ? 2 * t * t : 1 - Math.pow(-2 * t + 2, 2) / 2;
+    }
 
     /* ═══════════════════════════════════════════════════════════
        LAZY THREE.JS LOADER
@@ -178,7 +175,6 @@
             tex.needsUpdate = true;
             cb(tex);
         };
-        // Ensure Space Mono is available before rasterising the ramp.
         if (document.fonts && document.fonts.load) {
             document.fonts.load('700 ' + Math.floor(ATLAS_CELL * ATLAS_FONT_RATIO) + 'px "Space Mono"').then(draw, draw);
         } else {
@@ -187,8 +183,9 @@
     }
 
     /* ═══════════════════════════════════════════════════════════
-       SHADERS  (RawShaderMaterial — declares everything explicitly,
-       matches three.js' instanced-billboards example pattern)
+       SHADERS — Bayer ink reveal (the only entrance transformation).
+       RawShaderMaterial declares everything explicitly, matching three.js'
+       instanced-billboards example pattern.
        ═══════════════════════════════════════════════════════════ */
     var VERT_SRC = [
         'precision highp float;',
@@ -208,10 +205,11 @@
         'attribute float aPhase;',
         'attribute vec3  aDir;',
         'attribute float aSeed;',
+        'attribute float aBayer01;',
         '',
         'uniform float uGlyphSize;',
         'uniform float uRampCount;',
-        'uniform float uProgress;   // 0 scattered .. 1 resolved (Phase 2 motion)',
+        'uniform float uProgress;   // 0 hidden .. 1 fully revealed',
         'uniform float uTime;',
         'uniform vec2  uMouse;',
         'uniform float uVelocity;',
@@ -222,10 +220,17 @@
         'varying float vDepth;',
         '',
         'void main() {',
+        '    vec3  wpos = aOffset;',
+        '    float ws   = aScale;',
+        '',
+        '    // Bayer ink bleed: each glyph scales in over a narrow ±0.03 window',
+        '    // centred on its Bayer threshold (ink saturating a dithered print).',
+        '    ws *= smoothstep(aBayer01 - 0.03, aBayer01 + 0.03, uProgress);',
+        '',
         '    // Billboard: anchor the quad at the instance offset in view space,',
         '    // then add the corner in the camera plane so it always faces camera.',
-        '    vec4 mv = modelViewMatrix * vec4(aOffset, 1.0);',
-        '    mv.xy += position.xy * aScale * uGlyphSize;',
+        '    vec4 mv = modelViewMatrix * vec4(wpos, 1.0);',
+        '    mv.xy += position.xy * ws * uGlyphSize;',
         '',
         '    vColor = aColor;',
         '    vDepth = aDepth01;',
@@ -241,6 +246,7 @@
         'precision highp float;',
         '',
         'uniform sampler2D uAtlas;',
+        'uniform float uProgress;',
         'uniform float uFadeNear;',
         'uniform float uFadeFar;',
         'uniform float uGamma;',
@@ -309,7 +315,9 @@
 
         scene = new THREE.Scene();
         camera = new THREE.PerspectiveCamera(FOV, 2, 0.5, 1000);
-        camera.position.set(0, 0, targetZ);
+        // Camera is pinned at the resolve plane for the entire reveal — the
+        // Bayer ink effect moves the points (via uProgress), not the camera.
+        camera.position.set(0, 0, TARGET_CAMERA_Z);
 
         window.addEventListener('resize', onResize, { passive: true });
         window.addEventListener('scroll', onScroll, { passive: true });
@@ -327,6 +335,7 @@
 
         onResize();
         onScroll();
+        attachTrigger();
     }
 
     /* ═══════════════════════════════════════════════════════════
@@ -366,6 +375,7 @@
         var aPhase = [];
         var aDir = [];      // dx,dy,dz triples
         var aSeed = [];
+        var aBayer = [];    // bayer threshold 0..1 (reveal order)
 
         for (var i = 0; i < nRow; i++) {
             for (var j = 0; j < nCol; j++) {
@@ -379,7 +389,8 @@
 
                 // A3 — luminance-modulated Bayer occupancy gate.
                 var gate = BAYER_MIN_GATE + (BAYER_MAX_GATE - BAYER_MIN_GATE) * L;
-                if (bayerThreshold(j, i) > gate) continue;
+                var bayer = bayerThreshold(j, i);
+                if (bayer > gate) continue;
 
                 var z = THREE.MathUtils.randFloatSpread(RAND_RANGE_Z) * sz;
                 var p = project(
@@ -398,7 +409,7 @@
                 if (glyph > rampLen - 1) glyph = rampLen - 1;
                 if (glyph < 0) glyph = 0;
 
-                // Random unit direction (for Phase 2 motion) + phase + seed.
+                // Random unit direction (for optional Phase 2 motion) + phase + seed.
                 var dx = Math.random() * 2 - 1;
                 var dy = Math.random() * 2 - 1;
                 var dz = Math.random() * 2 - 1;
@@ -412,6 +423,7 @@
                 aPhase.push(Math.random());
                 aDir.push(dx / dl, dy / dl, dz / dl);
                 aSeed.push(Math.random());
+                aBayer.push(bayer);
             }
         }
 
@@ -432,6 +444,7 @@
         geom.setAttribute('aPhase', new THREE.InstancedBufferAttribute(new Float32Array(aPhase), 1));
         geom.setAttribute('aDir',    new THREE.InstancedBufferAttribute(new Float32Array(aDir), 3));
         geom.setAttribute('aSeed',   new THREE.InstancedBufferAttribute(new Float32Array(aSeed), 1));
+        geom.setAttribute('aBayer01', new THREE.InstancedBufferAttribute(new Float32Array(aBayer), 1));
         geom.instanceCount = count;
 
         // Avoid frustum-cull warnings; the cloud spans the camera axis anyway.
@@ -444,7 +457,10 @@
         layoutPortrait();
         imageLoaded = true;
 
-        if (reduceMotion) renderOnce();
+        // Re-evaluate visibility now that there's something to draw (matters
+        // for the reduced-motion static frame and for users who land directly
+        // on #contact).
+        updateVisibility();
     }
 
     /* ═══════════════════════════════════════════════════════════
@@ -462,6 +478,10 @@
        amount that centres the combined footprint of block + cloud. The
        portrait's left edge then tucks a small overlap behind the block's
        right edge (the block "goes over" the cloud) right at the midline.
+
+       The cloud only renders while #contact is in view, so the vertical lens
+       shift can be taken directly from the contact block's centre (no
+       proximity blend needed, unlike the old cross-section assembly).
        ═══════════════════════════════════════════════════════════ */
     function layoutPortrait() {
         if (!camera) return;
@@ -508,9 +528,17 @@
             // Shift the block left to centre the pair. `left` is safe here:
             // the entry animation drives transform/opacity (GSAP), never `left`.
             block.style.left = (-shiftFrac * vw) + 'px';
-        } else if (block) {
-            // Clear the desktop offset on mobile / when disabling the pair layout.
-            block.style.left = '';
+        } else {
+            // Mobile / no pair layout: clear the desktop block offset.
+            if (block) block.style.left = '';
+            // On mobile the portrait has no horizontal shift (centred), but we
+            // still track the block's vertical centre so the reveal stays
+            // glued to the contact content as the user scrolls. The mobile
+            // block bg is translucent (rgba(10,10,10,0.45) + blur), so the
+            // ink-reveal reads through the panel.
+            if (rect && vw < 1024) {
+                centerYFrac = (rect.top + rect.height / 2) / vh;
+            }
         }
 
         camera.updateProjectionMatrix();
@@ -531,43 +559,110 @@
         camera.aspect = w / h;
         camera.updateProjectionMatrix();
         layoutPortrait();
-        if (reduceMotion) renderOnce();
+        if (reduceMotion) updateVisibility();
     }
 
     /* ═══════════════════════════════════════════════════════════
-       SCROLL → CAMERA + VISIBILITY
-       progress: 0 when contact is just entering from below,
-                 1 once it is ~85% in view (resolved).
+       SCROLL → LAYOUT + RENDER GATING
+       No progress is derived from scroll anymore — the reveal is a one-shot
+       IntersectionObserver-triggered tween (see attachTrigger). Scroll only
+       keeps the layout (lens shift) synced and gates the render loop to the
+       contact viewport.
        ═══════════════════════════════════════════════════════════ */
-    function easeInOut(t) {
-        return t < 0.5 ? 2 * t * t : 1 - Math.pow(-2 * t + 2, 2) / 2;
-    }
-
     function onScroll() {
         layoutPortrait();
+        updateVisibility();
+    }
 
+    function contactIsInView() {
         var rect = contactSection.getBoundingClientRect();
         var vh = window.innerHeight;
-        var enterTop = vh;
-        var resolveTop = vh * 0.15;
-        var p = (enterTop - rect.top) / (enterTop - resolveTop);
-        if (p < 0) p = 0; else if (p > 1) p = 1;
+        return rect.bottom > 0 && rect.top < vh;
+    }
 
-        // Self-contained driver (active until main.js calls setProgress).
-        if (!reduceMotion && !externalProgress) {
-            targetZ = INIT_CAMERA_Z + (TARGET_CAMERA_Z - INIT_CAMERA_Z) * easeInOut(p);
-            curProgress = p;
+    function updateVisibility() {
+        var inView = contactIsInView();
+        if (reduceMotion) {
+            // Static resolved frame: shown only while contact is on-screen.
+            canvas.style.opacity = (inView && imageLoaded) ? '1' : '0';
+            if (inView && imageLoaded) renderOnce();
+            return;
         }
-
-        // Fade the cloud in as it assembles; fully visible once resolved.
-        canvas.style.opacity = Math.min(1, p * 1.4);
-
-        // Gate the render loop to when the cloud is actually on screen.
-        if (p > 0.001) {
+        if (inView) {
             if (!rafId) start();
-        } else if (rafId) {
-            stop();
+            // The cloud becomes visible only once the reveal has begun (or
+            // completed). Before that the canvas stays at its CSS opacity:0
+            // so the empty resolve plane never flashes on top of #about etc.
+            if (revealStarted) canvas.style.opacity = '1';
+        } else {
+            if (rafId) stop();
+            // Hide the canvas the moment contact leaves the viewport so the
+            // last rendered frame doesn't bleed through over upper sections.
+            canvas.style.opacity = '0';
         }
+    }
+
+    /* ═══════════════════════════════════════════════════════════
+       REVEAL TRIGGER — one-shot when contact is fully framed.
+       Adaptive threshold: when the section fits the viewport, require ~all
+       of it visible; when it's taller than the viewport, require the viewport
+       to be filled by the section (intersectionRatio = vh/sh).
+       ═══════════════════════════════════════════════════════════ */
+    function computeTriggerThreshold() {
+        var sh = contactSection.offsetHeight || window.innerHeight;
+        var vh = window.innerHeight || 1;
+        var target = sh <= vh ? TRIGGER_TOLERANCE : (vh / sh) * TRIGGER_TOLERANCE;
+        // Floor at 0.5 so a very tall section still fires once the viewport
+        // is clearly dominated by it.
+        return Math.max(0.5, Math.min(TRIGGER_TOLERANCE, target));
+    }
+
+    function attachTrigger() {
+        if (reduceMotion) {
+            // Reduced-motion: no reveal tween — render the resolved portrait
+            // statically once contact enters the viewport. updateVisibility
+            // (called from scroll/resize/buildMesh) handles the actual render.
+            return;
+        }
+
+        var threshold = computeTriggerThreshold();
+
+        if (!('IntersectionObserver' in window)) {
+            startReveal();
+            return;
+        }
+
+        var obs = new IntersectionObserver(function (entries) {
+            entries.forEach(function (e) {
+                if (e.isIntersecting && !revealStarted) {
+                    startReveal();
+                    obs.disconnect();
+                }
+            });
+        }, { threshold: threshold });
+        obs.observe(contactSection);
+
+        // Safety net: if the section is already fully framed on init (e.g.
+        // the page was reloaded while scrolled to contact), the observer may
+        // not re-fire — kick the reveal off manually.
+        if (!revealStarted) {
+            var rect = contactSection.getBoundingClientRect();
+            var vh = window.innerHeight;
+            var visibleTop = Math.max(0, rect.top);
+            var visibleBottom = Math.min(vh, rect.bottom);
+            var visibleH = Math.max(0, visibleBottom - visibleTop);
+            if (rect.height > 0 && (visibleH / rect.height) >= threshold) {
+                startReveal();
+                obs.disconnect();
+            }
+        }
+    }
+
+    function startReveal() {
+        if (revealStarted) return;
+        revealStarted = true;
+        canvas.style.opacity = '1';
+        if (!rafId) start();
     }
 
     /* ═══════════════════════════════════════════════════════════
@@ -577,15 +672,26 @@
         if (reduceMotion) { renderOnce(); return; }
         if (rafId) return;
         startTime = performance.now();
+        lastFrameTime = startTime;
         var loop = function () {
             rafId = requestAnimationFrame(loop);
             if (!imageLoaded) return;
 
-            camera.position.z += (targetZ - camera.position.z) * CAMERA_LERP;
+            var now = performance.now();
+            var dt = now - lastFrameTime;
+            lastFrameTime = now;
+
+            // Advance the reveal by real elapsed frame time (not by wall
+            // clock since start), so pausing the loop off-screen freezes
+            // progress instead of letting it skip ahead on resume.
+            if (revealStarted && linearProgress < 1) {
+                linearProgress = clamp01(linearProgress + dt / REVEAL_DURATION);
+                curProgress = easeInOut(linearProgress);
+            }
 
             if (uni) {
-                uni.uTime.value = (performance.now() - startTime) * 0.001;
-                uni.uProgress.value += (curProgress - uni.uProgress.value) * 0.1;
+                uni.uTime.value = (now - startTime) * 0.001;
+                uni.uProgress.value += (curProgress - uni.uProgress.value) * 0.18;
                 uni.uVelocity.value += (apiState.velocity - uni.uVelocity.value) * 0.1;
                 uni.uInteractive.value += (apiState.interactive - uni.uInteractive.value) * 0.1;
                 uni.uMouse.value.x += (apiState.mouseX - uni.uMouse.value.x) * 0.06;
@@ -603,34 +709,27 @@
 
     function renderOnce() {
         if (renderer && scene && camera && imageLoaded && uni) {
-            camera.position.z = targetZ;
             uni.uTime.value = (performance.now() - startTime) * 0.001;
-            uni.uProgress.value = curProgress;
+            uni.uProgress.value = 1;   // reduced-motion always shows the resolved portrait
             renderer.render(scene, camera);
         }
     }
 
     /* ═══════════════════════════════════════════════════════════
-       PUBLIC API — lets main.js drive the cloud (mirrors window.bayerBg).
-       Until main.js calls setProgress, the self-contained scroll path drives it.
+       PUBLIC API — optional reactive (non-reveal) inputs for main.js.
+       The reveal itself is fully self-contained: it auto-fires when #contact
+       is fully framed, so there is no setProgress / setEntranceMode anymore.
        ═══════════════════════════════════════════════════════════ */
     window.contactCloud = {
-        // Assembly progress 0..1. Once called, overrides the scroll-driven path.
-        setProgress: function (p) {
-            p = clamp01(p);
-            externalProgress = true;
-            curProgress = p;
-            targetZ = INIT_CAMERA_Z + (TARGET_CAMERA_Z - INIT_CAMERA_Z) * easeInOut(p);
-        },
-        // Scroll velocity 0..1 for reactive blow-apart (Phase 2).
+        // Scroll velocity 0..1 for reactive blow-apart (optional).
         setVelocity: function (v) {
             apiState.velocity = clamp01(Math.abs(v));
         },
-        // Interactive boost 0..1 (e.g. link hover) (Phase 3).
+        // Interactive boost 0..1 (e.g. link hover) (optional).
         setInteractive: function (x) {
             apiState.interactive = clamp01(x);
         },
-        // Pointer position 0..1 each axis (Phase 2/3 parallax + proximity).
+        // Pointer position 0..1 each axis (optional parallax + proximity).
         setMouse: function (x, y) {
             apiState.mouseX = clamp01(x);
             apiState.mouseY = clamp01(y);
@@ -641,7 +740,7 @@
     };
 
     /* ═══════════════════════════════════════════════════════════
-       BOOTSTRAP — init when the contact section is approached
+       BOOTSTRAP — init when the contact section is approached.
        ═══════════════════════════════════════════════════════════ */
     if ('IntersectionObserver' in window) {
         var early = new IntersectionObserver(function (entries) {

@@ -1474,19 +1474,6 @@ a:hover {
     text-decoration: none;
 }
 
-/* Hover indicator arrow */
-.contact-link::before {
-    content: '→';
-    position: absolute;
-    right: -20px;
-    top: 50%;
-    transform: translateY(-50%) translateX(-10px);
-    font-size: 10px;
-    color: var(--highlight);
-    opacity: 0;
-    transition: opacity 0.3s ease, transform 0.3s ease;
-}
-
 .contact-link:hover {
     border-color: var(--accent);
     transform: translateX(24px);
@@ -1494,11 +1481,6 @@ a:hover {
         -24px 0 30px -15px rgba(212, 197, 171, 0.04),
         0 1px 0 0 rgba(212, 197, 171, 0.06);
     background: linear-gradient(90deg, rgba(212, 197, 171, 0.03) 0%, transparent 60%);
-}
-
-.contact-link:hover::before {
-    opacity: 1;
-    transform: translateY(-50%) translateX(0);
 }
 
 .contact-link-label {
@@ -1818,6 +1800,9 @@ a:hover {
     }
 
     .contact-block--left {
+        /* Lighter than the desktop 0.75 so the Bayer ink reveal reads through
+           the panel where the portrait sits behind the full-width block. */
+        background: rgba(10, 10, 10, 0.5);
         backdrop-filter: blur(14px);
         -webkit-backdrop-filter: blur(14px);
     }
@@ -2076,12 +2061,15 @@ a:hover {
         font-size: 100px;
     }
 
-    /* ---- Contact: stacked layout ---- */
+    /* ---- Contact: stacked layout ----
+       No solid var(--bg) here (unlike the previous override) — the section
+       stays transparent so the Bayer dither background and the point-cloud
+       portrait canvas read through, matching desktop. Only the subtle warm
+       radial glow is layered on top. */
     .contact-section {
         padding: 100px 16px 40px;
         background:
-            radial-gradient(ellipse 80% 40% at 30% 50%, rgba(212, 197, 171, 0.02) 0%, transparent 70%),
-            var(--bg);
+            radial-gradient(ellipse 80% 40% at 30% 50%, rgba(212, 197, 171, 0.02) 0%, transparent 70%);
     }
 
     .contact-container {
@@ -2094,6 +2082,11 @@ a:hover {
     }
 
     .contact-block--left {
+        /* Lighter than the desktop 0.75 so the Bayer ink reveal reads through
+           the panel on mobile, where the portrait sits directly behind the
+           full-width block (no side-by-side layout). The backdrop blur keeps
+           text legible over the resolving glyphs. */
+        background: rgba(10, 10, 10, 0.45);
         backdrop-filter: blur(10px);
         -webkit-backdrop-filter: blur(10px);
     }
@@ -2126,10 +2119,6 @@ a:hover {
         transform: translateX(0);
         box-shadow: none;
         background: none;
-    }
-
-    .contact-link::before {
-        display: none;
     }
 
     .contact-link-value {
