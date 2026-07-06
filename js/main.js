@@ -1437,7 +1437,13 @@ function playStartupAnimation(data) {
                     ...(socialFloats ? Array.from(socialFloats) : []),
                     meta, glow, navBar
                 ].filter(Boolean);
-                gsap.set(elementsToClear, { clearProps: 'all' });
+                // Selective clearProps: 'all' would also strip CSS custom
+                // properties set by other modules (e.g. --pulse-mask on
+                // .hero-social from attention-pulse.js), turning the masked
+                // sweep into an unmasked grey box after the first visit.
+                gsap.set(elementsToClear, {
+                    clearProps: 'opacity,scale,rotation,rotationX,rotationY,rotationZ,x,y,transformOrigin,transformPerspective,filter'
+                });
             } catch (_) {}
             document.documentElement.style.overflow = '';
             document.body.style.overflow = '';
@@ -1605,7 +1611,9 @@ function playStartupAnimation(data) {
                     '.hero-bg-text', '.hero-name-line', '.hero-tag--top', '.hero-tag--bottom',
                     '.hero-bracket--left', '.hero-bracket--right', '.hero-debris', '.hero-social',
                     '.hero-social-float', '.hero-meta', '.hero-glow', '.nav-bar'
-                ], { clearProps: 'all' });
+                ], {
+                    clearProps: 'opacity,scale,rotation,rotationX,rotationY,rotationZ,x,y,transformOrigin,transformPerspective,filter'
+                });
             } catch (_) {}
             finish();
         }
