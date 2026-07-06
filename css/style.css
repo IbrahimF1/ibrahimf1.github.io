@@ -2216,3 +2216,103 @@ a:hover {
         animation: none;
     }
 }
+
+/* ================================================================
+   ATTENTION PULSE — periodic "clickability" sweep
+   ================================================================
+   A sleek white→gray moving linear gradient that briefly travels
+   across the ACTUAL CONTENT of interactive elements every 15s to
+   signal they are clickable (hero socials, project repo SVGs).
+
+   The gradient is painted ON the element itself — never a box:
+     • SVG hosts  (.hero-social, .project-card-repo) → a ::after is
+       masked to the icon silhouette via mask-image (a WHITE-filled
+       copy of the inline SVG, built in JS so the shape is visible
+       under both mask-mode:alpha and mask-mode:luminance — MDN notes
+       the two modes behave differently).
+
+   The band = opaque currentColor base + a white→gray core, so each
+   element keeps its own color everywhere except where the band
+   passes, then returns to normal. Host transform/opacity/color
+   (GSAP-owned) are untouched, per Context7's GSAP conflict guidance.
+   ================================================================ */
+
+.clickable-pulse {
+    --pulse-gradient: linear-gradient(
+        115deg,
+        currentColor 38%,
+        #c8c2b8 45%,
+        #ffffff 50%,
+        #c8c2b8 55%,
+        currentColor 62%
+    );
+    /* Containing block for ::after on otherwise-static hosts. */
+    position: relative;
+}
+
+/* .project-card-repo is positioned absolutely for its corner clip;
+   don't let the base rule clobber that. */
+.project-card-repo.clickable-pulse {
+    position: absolute;
+}
+
+/* ---- SVG icon hosts: gradient on a ::after masked to the icon ---- */
+.hero-social.clickable-pulse::after,
+.project-card-repo.clickable-pulse::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    background-image: var(--pulse-gradient);
+    background-size: 220% 100%;
+    background-position: 200% 0;
+    background-repeat: no-repeat;
+    /* The icon silhouette as a white-filled SVG data URL, set per host
+       via --pulse-mask in js/attention-pulse.js. Fallback 'none' is
+       harmless because is-sweeping is only ever added once the mask
+       exists (same module owns both). */
+    -webkit-mask-image: var(--pulse-mask, none);
+    mask-image: var(--pulse-mask, none);
+    -webkit-mask-size: 100% 100%;
+    mask-size: 100% 100%;
+    -webkit-mask-position: center;
+    mask-position: center;
+    -webkit-mask-repeat: no-repeat;
+    mask-repeat: no-repeat;
+    opacity: 0;
+    z-index: 6;
+    will-change: background-position, opacity;
+}
+
+.hero-social.clickable-pulse.is-sweeping::after,
+.project-card-repo.clickable-pulse.is-sweeping::after {
+    animation: clickable-sweep-svg 2s cubic-bezier(0.37, 0, 0.63, 1) 1 both;
+}
+
+@keyframes clickable-sweep-svg {
+    0% {
+        background-position: 200% 0;
+        opacity: 0;
+    }
+    15% {
+        opacity: 1;
+    }
+    85% {
+        opacity: 1;
+    }
+    100% {
+        background-position: -120% 0;
+        opacity: 0;
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .clickable-pulse::after,
+    .clickable-pulse.is-sweeping::after {
+        animation: none;
+    }
+
+    .clickable-pulse::after {
+        display: none;
+    }
+}
