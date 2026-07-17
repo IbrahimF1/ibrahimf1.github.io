@@ -626,18 +626,24 @@ function initAnimations(data) {
         }
 
         // Social icons scatter
+        // Opacity is faded on the .hero-social-float wrapper, NOT the inner
+        // .hero-social link: a scrubbed opacity tween writes an inline value
+        // that would override the CSS :hover opacity rule on the link.
         if (!reduceMotion) {
             data.hero.social.forEach((s, i) => {
                 const socialEl = document.querySelector(`.${s.social_class}`);
+                const floatEl = document.querySelector(`.${s.float_class}`);
+                const angle = (i * 137.5) * (Math.PI / 180); // golden angle distribution
                 if (socialEl) {
-                    const angle = (i * 137.5) * (Math.PI / 180); // golden angle distribution
                     heroTl.to(socialEl, {
                         x: m(Math.round(Math.cos(angle) * 250)),
                         y: m(Math.round(Math.sin(angle) * 180)),
                         rotation: Math.round(Math.cos(angle) * -25),
-                        opacity: 0,
                         duration: 1
                     }, 0);
+                }
+                if (floatEl) {
+                    heroTl.to(floatEl, { opacity: 0, duration: 1 }, 0);
                 }
             });
         }
