@@ -7,9 +7,9 @@
     <meta name="theme-color" content="#0a0a0a">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-    <title>PORTFOLIO://ENGINEER</title>
+    <title>IBRAHIM FARUQUEE / SOFTWARE ENGINEER</title>
     <meta name="description"
-        content="Portfolio of John Doe — Software engineer specializing in distributed systems, low-level architecture, and interfaces that push boundaries.">
+        content="Ibrahim Faruquee — Software engineer specializing in full-stack web development, applied machine learning, and real-time systems.">
     <!-- Ditherpunk favicon — static fallback, replaced at runtime by js/favicon.js -->
     <link rel="icon" type="image/svg+xml" href="assets/favicon.svg">
     <link rel="apple-touch-icon" href="assets/favicon.svg">
@@ -30,19 +30,21 @@
 
         :root {
             --bg: #0a0a0a;
-            --bg-elevated: #111110;
+            --bg-elevated: #121210;
+            --bg-cell: #0e0e0c;
             --fg: #c8c2b8;
             --fg-dim: #6b6560;
-            --fg-bright: #e8e4df;
+            --fg-bright: #f2eee7;
             --accent: #8a7f72;
             --accent-bright: #b5a898;
-            --border: #2a2825;
+            --border: #24221f;
             --border-bright: #3a3632;
-            --highlight: #d4c5ab;
-            --error: #8a6f5f;
+            --highlight: #e8c98c;
+            --ink: #f2eee7;
             --grid-line: rgba(200, 194, 184, 0.04);
             --font-mono: 'Space Mono', 'Courier New', monospace;
             --font-display: 'Datatype', 'Space Mono', monospace;
+            --pad: clamp(16px, 3vw, 40px);
             --transition-raw: 0.1s steps(2)
         }
 
@@ -65,10 +67,11 @@
             color: var(--fg);
             font-family: var(--font-mono);
             font-size: 14px;
-            line-height: 1.6;
+            line-height: 1.5;
             overflow-x: hidden;
             cursor: none;
-            position: relative
+            position: relative;
+            -webkit-font-smoothing: antialiased
         }
 
         #bayer-bg {
@@ -89,29 +92,10 @@
             height: 100%;
             pointer-events: none;
             z-index: 9999;
-            opacity: 0.035;
+            opacity: 0.04;
             background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)'/%3E%3C/svg%3E");
             background-repeat: repeat;
             background-size: 256px 256px
-        }
-
-        .grid-overlay {
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            pointer-events: none;
-            z-index: 1;
-            display: flex;
-            justify-content: space-between;
-            padding: 0 12.5%
-        }
-
-        .grid-line {
-            width: 1px;
-            height: 100%;
-            background: var(--grid-line)
         }
 
         .cursor-dot {
@@ -145,6 +129,7 @@
             .cursor-dot, .cursor-ring { display: none }
         }
 
+        /* ---- NAV (critical) ---- */
         .nav-bar {
             position: fixed;
             top: 0;
@@ -153,346 +138,167 @@
             display: flex;
             justify-content: space-between;
             align-items: center;
-            padding: 20px 30px;
+            padding: 0 var(--pad);
+            height: 56px;
             z-index: 1000;
-            background: rgba(10, 10, 10, 0.85);
-            -webkit-backdrop-filter: blur(0px);
-            backdrop-filter: blur(0px);
+            background: rgba(10, 10, 10, 0.7);
+            backdrop-filter: blur(14px) saturate(1.2);
+            -webkit-backdrop-filter: blur(14px) saturate(1.2);
             border-bottom: 1px solid var(--border);
             font-size: 11px;
-            letter-spacing: 0.1em;
+            letter-spacing: 0.12em;
             text-transform: uppercase
         }
 
-        .nav-index {
-            color: var(--accent-bright);
-            font-variant-numeric: tabular-nums
+        .nav-brand {
+            display: flex;
+            gap: 8px;
+            align-items: baseline;
+            color: var(--fg-bright);
+            font-family: var(--font-display);
+            font-weight: 700;
+            font-stretch: 100%;
+            letter-spacing: 0.02em;
+            text-decoration: none
+        }
+
+        .nav-brand span {
+            color: var(--highlight);
+            font-weight: 400
         }
 
         .nav-links {
             display: flex;
-            gap: 30px
+            gap: 28px
         }
 
         .nav-link {
             color: var(--fg-dim);
             transition: color var(--transition-raw);
-            position: relative
+            position: relative;
+            text-decoration: none
         }
 
-        .section {
+        .nav-status {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            color: var(--fg-dim);
+            font-variant-numeric: tabular-nums
+        }
+
+        .nav-dot {
+            width: 6px;
+            height: 6px;
+            background: var(--highlight);
+            display: inline-block;
+            animation: nav-pulse 2s steps(4) infinite
+        }
+
+        @keyframes nav-pulse {
+            0%, 100% { opacity: 1 }
+            50% { opacity: 0.3 }
+        }
+
+        /* ---- HERO (critical) ---- */
+        .hero-section {
             position: relative;
-            min-height: 100vh;
+            height: 100vh;
+            height: 100dvh;
+            display: flex;
+            flex-direction: column;
+            justify-content: flex-end;
+            padding-top: 56px;
             overflow: hidden
         }
 
-        .hero-section {
-            display: flex;
-            flex-direction: column;
-            justify-content: center;
-            align-items: center;
-            height: 100vh;
-            height: 100dvh;
-            position: relative
-        }
-
-        .hero-layers {
+        .hero-canvas {
             position: relative;
-            width: 100%;
-            height: 100%;
+            flex: 1;
             display: flex;
-            justify-content: center;
-            align-items: center;
-            perspective: 1200px
-        }
-
-        .startup-overlay {
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            background: var(--bg);
-            z-index: 9998;
-            pointer-events: none;
-            will-change: transform, opacity
-        }
-
-        .hero-layer {
-            position: absolute;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            display: flex;
-            justify-content: center;
-            align-items: center
-        }
-
-        .hero-layer--bg {
-            z-index: 2
-        }
-
-        .hero-bg-text {
-            font-family: var(--font-display);
-            font-size: clamp(80px, 18vw, 300px);
-            font-weight: 300;
-            font-stretch: 125%;
-            color: transparent;
-            -webkit-text-stroke: 1px var(--border-bright);
-            text-stroke: 1px var(--border-bright);
-            letter-spacing: -0.04em;
-            white-space: nowrap;
-            -webkit-user-select: none;
-            user-select: none
-        }
-
-        .hero-layer--mid {
-            z-index: 4;
             flex-direction: column;
-            gap: 0;
-            pointer-events: none
+            justify-content: center;
+            padding: 0 var(--pad)
         }
 
-        .hero-tag {
-            font-family: var(--font-display);
-            font-size: clamp(18px, 3vw, 42px);
-            font-weight: 600;
-            font-stretch: 75%;
-            letter-spacing: 0.3em;
+        .hero-eyebrow {
+            display: flex;
+            justify-content: space-between;
+            font-size: 11px;
+            letter-spacing: 0.2em;
             color: var(--fg-dim);
-            text-transform: uppercase
+            text-transform: uppercase;
+            margin-bottom: clamp(8px, 2vh, 24px)
         }
 
-        .hero-tag--top {
-            transform: translateX(-30%)
-        }
-
-        .hero-tag--bottom {
-            transform: translateX(30%)
-        }
-
-        .hero-layer--name {
-            z-index: 6
+        .hero-eyebrow .hero-status {
+            color: var(--highlight)
         }
 
         .hero-name {
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            gap: 0
-        }
-
-        .hero-name-line {
             font-family: var(--font-display);
-            font-size: clamp(60px, 14vw, 220px);
-            font-weight: 700;
-            font-stretch: 100%;
+            font-weight: 800;
+            font-stretch: 125%;
+            font-size: clamp(64px, 17vw, 280px);
+            line-height: 0.82;
+            letter-spacing: -0.045em;
             color: var(--fg-bright);
-            line-height: 0.85;
-            letter-spacing: -0.03em;
-            display: block
-        }
-
-        .hero-name-line[data-line="2"] {
-            color: transparent;
-            -webkit-text-stroke: 2px var(--fg-bright);
-            text-stroke: 2px var(--fg-bright)
-        }
-
-        .hero-layer--fg {
-            z-index: 8;
-            pointer-events: none
-        }
-
-        .hero-debris {
-            position: absolute;
-            font-family: var(--font-mono);
-            font-size: 14px;
-            color: var(--accent);
-            opacity: 0.5
-        }
-
-        .hero-debris--1 {
-            top: 20%;
-            left: 8%
-        }
-
-        .hero-debris--2 {
-            top: 15%;
-            right: 12%
-        }
-
-        .hero-debris--3 {
-            bottom: 25%;
-            left: 15%;
-            color: var(--accent);
-            opacity: 0.55
-        }
-
-        .hero-debris--4 {
-            top: 30%;
-            right: 25%;
-            font-size: 80px;
-            font-family: var(--font-display);
-            font-weight: 200;
-            color: var(--accent);
-            opacity: 0.15
-        }
-
-        .hero-debris--5 {
-            bottom: 20%;
-            right: 8%
-        }
-
-        .hero-bracket {
-            position: absolute;
-            font-family: var(--font-display);
-            font-size: clamp(120px, 25vw, 400px);
-            font-weight: 200;
-            color: var(--border-bright);
-            opacity: 0.3;
-            line-height: 1
-        }
-
-        .hero-bracket--left {
-            left: 5%;
-            top: 50%;
-            transform: translateY(-50%)
-        }
-
-        .hero-bracket--right {
-            right: 5%;
-            top: 50%;
-            transform: translateY(-50%)
-        }
-
-        .hero-meta {
-            position: absolute;
-            bottom: 40px;
-            left: 50%;
-            transform: translateX(-50%);
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            gap: 10px;
-            z-index: 10
-        }
-
-        .hero-meta-line {
-            font-size: 10px;
-            letter-spacing: 0.3em;
-            color: var(--fg-dim);
             text-transform: uppercase
         }
 
-        .hero-scroll-indicator {
-            font-size: 20px;
-            animation: scroll-bounce 1.5s steps(3) infinite
+        .hero-name .line {
+            display: block;
+            overflow: hidden
         }
 
-        .hero-social-float {
-            position: absolute;
-            width: 44px;
-            height: 44px;
-            pointer-events: none;
-            will-change: transform
+        .hero-name .line--stroke {
+            color: transparent;
+            -webkit-text-stroke: 1.5px var(--fg-dim)
         }
 
-        .hero-social-float--github {
-            top: 25%;
-            left: 62%;
-            animation: social-float-github 4s ease-in-out infinite
-        }
-
-        .hero-social-float--linkedin {
-            top: 70%;
-            right: 62%;
-            animation: social-float-linkedin 4.5s ease-in-out infinite
-        }
-
-        @keyframes social-float-github {
-            0%, 100% { transform: translate3d(0, 0, 0) }
-            50% { transform: translate3d(0, -14px, 0) }
-        }
-
-        @keyframes social-float-linkedin {
-            0%, 100% { transform: translate3d(0, 0, 0) }
-            50% { transform: translate3d(0, -12px, 0) }
-        }
-
-        .hero-social {
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            width: 44px;
-            height: 44px;
+        .hero-role {
+            font-family: var(--font-display);
+            font-stretch: 75%;
+            font-size: clamp(14px, 2.2vw, 30px);
+            letter-spacing: 0.3em;
             color: var(--accent-bright);
-            opacity: 0.7;
-            pointer-events: auto;
-            transition: color var(--transition-raw);
-            text-decoration: none;
-            will-change: transform, opacity
+            text-transform: uppercase;
+            margin-top: clamp(8px, 1.6vh, 18px)
         }
 
-        .hero-social svg {
-            width: 100%;
-            height: 100%
+        /* gapless stat bar pinned to bottom of hero */
+        .hero-stats {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            border-top: 1px solid var(--border)
         }
 
-        .hero-social:hover {
-            color: #fff;
-            opacity: 1
+        .hero-stat {
+            padding: clamp(14px, 2.4vw, 28px) clamp(10px, 1.6vw, 22px);
+            border-right: 1px solid var(--border);
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+            background: rgba(10, 10, 10, 0.4)
         }
 
-        .hero-social--github {
-            transform: rotate(-8deg);
-            opacity: 0.6
+        .hero-stat:last-child { border-right: 0 }
+
+        .hero-stat-num {
+            font-family: var(--font-display);
+            font-stretch: 100%;
+            font-weight: 700;
+            font-size: clamp(28px, 5vw, 64px);
+            line-height: 1;
+            color: var(--fg-bright);
+            font-variant-numeric: tabular-nums
         }
 
-        .hero-social--linkedin {
-            transform: rotate(6deg);
-            opacity: 0.6
-        }
-
-        @media (prefers-reduced-motion: reduce) {
-            .hero-social-float--github,
-            .hero-social-float--linkedin {
-                animation: none
-            }
-
-            .hero-glow {
-                animation: none
-            }
-
-            .startup-overlay {
-                display: none !important
-            }
-        }
-
-        @keyframes scroll-bounce {
-
-            0%,
-            100% {
-                transform: translateY(0)
-            }
-
-            50% {
-                transform: translateY(8px)
-            }
-        }
-
-        /* Hero bottom glow — teases next section */
-        .hero-glow {
-            position: absolute;
-            bottom: 0;
-            left: 0;
-            width: 100%;
-            height: 320px;
-            background:
-                radial-gradient(ellipse 100% 100% at 50% 100%, rgba(212, 197, 171, 0.25) 0%, rgba(138, 127, 114, 0.12) 40%, transparent 75%);
-            pointer-events: none;
-            z-index: 9
+        .hero-stat-label {
+            font-size: 9px;
+            letter-spacing: 0.18em;
+            color: var(--fg-dim);
+            text-transform: uppercase
         }
 
         /* Mobile hamburger — critical for first paint */
@@ -518,13 +324,24 @@
             background: var(--fg-dim)
         }
 
+        .startup-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: var(--bg);
+            z-index: 9998;
+            pointer-events: none;
+            will-change: transform, opacity
+        }
+
         @media (max-width: 600px) {
             .nav-hamburger { display: flex }
-            .nav-links { display: none }
-            .hero-section {
-                height: 100vh;
-                height: 100dvh
-            }
+            .nav-links, .nav-status { display: none }
+            .hero-stats { grid-template-columns: repeat(2, 1fr) }
+            .hero-stat:nth-child(2) { border-right: 0 }
+            .hero-stat:nth-child(-n+2) { border-bottom: 1px solid var(--border) }
         }
     </style>
     <link rel="stylesheet" href="css/style.css">
@@ -536,26 +353,18 @@
     <!-- NOISE OVERLAY -->
     <div class="noise-overlay"></div>
 
-    <!-- GRID OVERLAY -->
-    <div class="grid-overlay">
-        <div class="grid-line"></div>
-        <div class="grid-line"></div>
-        <div class="grid-line"></div>
-        <div class="grid-line"></div>
-        <div class="grid-line"></div>
-        <div class="grid-line"></div>
-        <div class="grid-line"></div>
-        <div class="grid-line"></div>
-    </div>
-
     <!-- CURSOR -->
     <div class="cursor-dot"></div>
     <div class="cursor-ring"></div>
 
     <!-- NAV — dynamically populated from YAML -->
     <nav class="nav-bar">
-        <div class="nav-index">[000]</div>
+        <a href="#hero" class="nav-brand" data-cursor="link">IBRAHIM<span>F</span></a>
         <div class="nav-links" id="navLinks"></div>
+        <div class="nav-status">
+            <span class="nav-dot"></span>
+            <span id="navClock">NYC —</span>
+        </div>
         <button class="nav-hamburger" aria-label="Toggle navigation menu" aria-expanded="false">
             <span class="hamburger-line"></span>
             <span class="hamburger-line"></span>
@@ -568,62 +377,57 @@
         <div class="mobile-menu-inner" id="mobileMenuLinks"></div>
         <div class="mobile-menu-footer">
             <span>SYS::ACTIVE</span>
-            <span>v1.0.0</span>
+            <span>v2.0.0</span>
         </div>
     </div>
 
     <!-- ==================== HERO SECTION ==================== -->
     <section id="hero" class="section hero-section">
-        <div class="hero-layers" id="heroLayers">
-            <!-- Dynamically populated from YAML -->
+        <div class="hero-canvas">
+            <div class="hero-eyebrow">
+                <span id="heroLocation">NEW YORK, NY</span>
+                <span class="hero-status" id="heroStatus">OPEN TO WORK</span>
+            </div>
+            <div class="hero-name" id="heroName"><!-- populated from YAML --></div>
+            <div class="hero-role" id="heroRole"><!-- populated from YAML --></div>
+            <div class="hero-social-row" id="heroSocial"><!-- populated from YAML --></div>
         </div>
-        <div class="hero-meta" id="heroMeta">
-            <!-- Dynamically populated from YAML -->
-        </div>
+        <div class="hero-stats" id="heroStats"><!-- populated from YAML --></div>
     </section>
+
+    <!-- ==================== MARQUEE 1 ==================== -->
+    <div class="marquee" aria-hidden="true">
+        <div class="marquee-track" id="marqueeTrack1"></div>
+    </div>
 
     <!-- ==================== ABOUT SECTION ==================== -->
     <section id="about" class="section about-section">
-        <div class="section-label">01_ABOUT</div>
-        <div class="about-container" id="aboutContainer">
-            <!-- Dynamically populated from YAML -->
-        </div>
-        <!-- Debris appended directly here from JS -->
+        <div class="section-head" id="aboutHead"><!-- populated from YAML --></div>
+        <div class="about-grid" id="aboutGrid"><!-- populated from YAML --></div>
     </section>
+
+    <!-- ==================== MARQUEE 2 ==================== -->
+    <div class="marquee marquee--rev" aria-hidden="true">
+        <div class="marquee-track" id="marqueeTrack2"></div>
+    </div>
 
     <!-- ==================== PROJECTS SECTION ==================== -->
     <section id="projects" class="section projects-section">
-        <div class="section-label">02_PROJECTS</div>
-        <div class="projects-bg-text" id="projectsBgText">WORK</div>
-        <div class="projects-stack" id="projectsStack">
-            <!-- Dynamically populated from YAML -->
-        </div>
-        <!-- Debris appended directly here from JS -->
-        <div class="projects-heading-block" id="projectsHeadingBlock">
-            <!-- Dynamically populated from YAML -->
-        </div>
+        <div class="section-head" id="projectsHead"><!-- populated from YAML --></div>
+        <div class="projects-grid" id="projectsGrid"><!-- populated from YAML --></div>
     </section>
 
     <!-- ==================== EXPERIENCE SECTION ==================== -->
     <section id="experience" class="section experience-section">
-        <div class="section-label">03_EXPERIENCE</div>
-        <div class="exp-container" id="expContainer">
-            <!-- Dynamically populated from YAML -->
-        </div>
-        <div class="exp-bg-text">WORK</div>
-        <!-- Debris appended directly here from JS -->
+        <div class="section-head" id="experienceHead"><!-- populated from YAML --></div>
+        <div class="experience-list" id="experienceList"><!-- populated from YAML --></div>
     </section>
 
     <!-- ==================== CONTACT SECTION ==================== -->
     <section id="contact" class="section contact-section">
-        <div class="section-label">04_CONTACT</div>
-        <!-- Debris appended directly here from JS -->
-        <div class="contact-container" id="contactContainer">
-            <!-- Dynamically populated from YAML -->
-        </div>
-        <div class="contact-footer" id="contactFooter">
-            <!-- Dynamically populated from YAML -->
-        </div>
+        <div class="section-head section-head--contact" id="contactHead"><!-- populated from YAML --></div>
+        <div class="contact-grid" id="contactGrid"><!-- populated from YAML --></div>
+        <div class="contact-footer" id="contactFooter"><!-- populated from YAML --></div>
     </section>
 
     <!-- SCRIPTS — deferred for parallel download and non-blocking execution -->
@@ -634,7 +438,7 @@
     <script src="js/bayer-background.js" defer></script>
     <script src="js/favicon.js" defer></script>
     <script src="js/main.js" defer></script>
-    <!-- Attention-pulse sweep: periodic clickability signal on interactive elements -->
+    <!-- Attention-pulse sweep: periodic clickability signal on interactive icons -->
     <script src="js/attention-pulse.js" defer></script>
     <!-- Contact section point-cloud portrait (lazy-loads three.js itself) -->
     <script src="js/contact-cloud.js" defer></script>

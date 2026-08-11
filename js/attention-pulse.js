@@ -24,7 +24,7 @@
 
     // Interactive surfaces to tease. Generated dynamically from data.yaml.
     var SELECTOR = [
-        '.hero-social',          // floating SVGs in the hero
+        '.hero-social',          // social SVGs in the hero + contact footer
         '.project-card-repo'     // GitHub SVG on each project card
     ].join(', ');
 

@@ -39,14 +39,14 @@
     var IMG_URL         = 'assets/profile_pic.png';
     var THREE_CDN       = 'https://cdn.jsdelivr.net/npm/three@0.130.0/build/three.min.js';
 
-    var GRID_ROWS       = 180;                        // sampling resolution (image height)
+    var GRID_ROWS       = window.matchMedia('(max-width: 600px)').matches ? 84 : 160; // sampling resolution (image height); reduced on narrow viewports where the smaller .contact-portrait frame would otherwise map each glyph to <1px (sub-pixel → ASCII vanishes)
     var INSTANCE_SIZE   = 1;                          // grid cell size in world units
     var FOV             = 75;
     var TARGET_CAMERA_Z = 180;                        // camera z at the resolve plane (also sizes it)
     var RAND_RANGE_Z    = 2 * TARGET_CAMERA_Z * 0.2; // depth spread of the instances
     var ALPHA_THRESHOLD = 20;                         // discard pixels below this alpha
     var EARLY_MARGIN    = '400px 0px 400px 0px';      // pre-load before contact reaches viewport
-    var REVEAL_DURATION = 2000;                       // ms — one-shot ink-reveal tween
+    var REVEAL_DURATION = 1500;                       // ms — one-shot ink-reveal tween
     var TRIGGER_TOLERANCE = 0.95;                     // "fully in view" leniency (0..1)
 
     /* ── ASCII / look tuning ──────────────────────────────────── */
@@ -77,7 +77,9 @@
     var canvas = document.createElement('canvas');
     canvas.id = 'contact-cloud';
     canvas.setAttribute('aria-hidden', 'true');
-    document.body.appendChild(canvas);
+    // The canvas is mounted inside the .contact-portrait frame at init time
+    // (see mountCanvas), not on <body>, so it tracks the frame 1:1 on every
+    // viewport — see layoutPortrait for why this matters on mobile.
 
     var renderer, scene, camera, mesh, material, uni;
     var inited = false;
@@ -322,6 +324,9 @@
         window.addEventListener('resize', onResize, { passive: true });
         window.addEventListener('scroll', onScroll, { passive: true });
 
+        // Mount the canvas into the portrait frame before any sizing happens.
+        mountCanvas();
+
         // Atlas first (needs the font), then material, then the image-driven mesh.
         buildAtlas(function (tex) {
             material = createMaterial(tex);
@@ -464,87 +469,53 @@
     }
 
     /* ═══════════════════════════════════════════════════════════
-       LAYOUT PORTRAIT — camera lens shift (off-axis frustum)
-       The cloud MUST stay centred on the camera axis for the portrait to
-       resolve crisp: any mesh offset or scale introduces depth-dependent
-       parallax that smears the image (instances in a column no longer align).
-       So the camera stays on the axis and we instead SHEAR the projection
-       matrix — a lens shift — which offsets the whole framed view by a
-       uniform, depth-independent amount.
+       LAYOUT PORTRAIT — canvas mounted in the frame
+       The WebGL canvas lives INSIDE the .contact-portrait frame and fills it
+       1:1 (position:absolute; inset:0 — css/style.css), so the portrait simply
+       fills the tile: the camera stays centred on the axis — the requirement
+       for a crisp resolve, since any mesh offset/scale introduces
+       depth-dependent parallax that smears the image (instances in a column no
+       longer align) — and is zoomed to COVER the frame's aspect ratio.
 
-       Composition: the contact block and the portrait SHARE the centre.
-       The block is flex-centred (its natural centre sits at viewport 0.5),
-       so we shift the whole pair left by (halfW − overlap/2) — exactly the
-       amount that centres the combined footprint of block + cloud. The
-       portrait's left edge then tucks a small overlap behind the block's
-       right edge (the block "goes over" the cloud) right at the midline.
-
-       The cloud only renders while #contact is in view, so the vertical lens
-       shift can be taken directly from the contact block's centre (no
-       proximity blend needed, unlike the old cross-section assembly).
+       This replaces an earlier design that kept the canvas position:fixed on
+       <body> (filling the whole viewport) and clipped it down to the frame via
+       clip-path plus an off-axis lens shift derived from getBoundingClientRect()
+       normalised against window.innerWidth/innerHeight. That was fragile on
+       phones: iOS Safari / Chrome Android split the *layout* viewport (the
+       fixed-canvas reference) from the *visual* viewport (the bounding-client
+       reference) whenever the URL bar shows or hides, so the clip window and
+       lens shift desynced and the portrait silently slid off-screen. A narrow
+       desktop window has a single viewport, which is exactly why the bug was
+       mobile-only. Mounting the canvas in the frame removes the entire
+       coordinate-translation layer — there is nothing left to desync.
        ═══════════════════════════════════════════════════════════ */
+    function mountCanvas() {
+        var frame = document.querySelector('#contactHead .contact-portrait');
+        if (frame && canvas.parentNode !== frame) frame.appendChild(canvas);
+        return frame;
+    }
+
     function layoutPortrait() {
         if (!camera) return;
-        var vw = window.innerWidth;
-        var vh = window.innerHeight;
-        var aspect = vh ? vw / vh : 1;
+        var frame = mountCanvas();
+        // Size to the canvas (== the frame, post-mount). Falling back to the
+        // frame and then the window keeps start-up (pre-mount) calls safe.
+        var fw = canvas.clientWidth  || (frame && frame.clientWidth)  || window.innerWidth;
+        var fh = canvas.clientHeight || (frame && frame.clientHeight) || window.innerHeight;
 
-        var centerFrac = 0.5;   // desired portrait centre, screen-x (0=left … 1=right)
-        var centerYFrac = 0.5;  // desired portrait centre, screen-y (0=top … 1=bottom)
-
-        var block = document.querySelector('.contact-block--left');
-        var rect = block ? block.getBoundingClientRect() : null;
-
-        if (vw >= 1024 && rect) {
-            var blockW = rect.width / vw;
-
-            // Resolved on-screen half-width of the portrait (fraction of
-            // viewport). visibleWorldHeight at the resolve plane is
-            // 2 * TARGET_CAMERA_Z * tan(FOV/2); the visible world width is
-            // that times the aspect ratio.
-            var visibleH = 2 * TARGET_CAMERA_Z * Math.tan((FOV / 2) * Math.PI / 180);
-            var portraitWFrac = portraitWorldW ? portraitWorldW / (visibleH * aspect) : 0.36;
-            var halfW = portraitWFrac / 2;
-
-            // Overlap: how far the block's right edge covers the cloud's left
-            // edge (fraction of viewport).
-            var overlap = 0.06;
-
-            // Centre the GROUP (block + cloud). The block's natural centre is
-            // at 0.5, so shifting the pair left by (halfW − overlap/2) puts the
-            // midpoint of [block-left … cloud-right] exactly on the midline.
-            var shiftFrac = halfW - overlap / 2;
-            var blockRight = (0.5 + blockW / 2) - shiftFrac;
-
-            // Park the portrait so its left edge sits `overlap` behind the
-            // block's right edge.
-            centerFrac = blockRight + halfW - overlap;
-            // Keep the whole portrait on-screen.
-            if (centerFrac + halfW > 0.985) centerFrac = 0.985 - halfW;
-            if (centerFrac - halfW < 0.015) centerFrac = 0.015 + halfW;
-
-            centerYFrac = (rect.top + rect.height / 2) / vh;
-
-            // Shift the block left to centre the pair. `left` is safe here:
-            // the entry animation drives transform/opacity (GSAP), never `left`.
-            block.style.left = (-shiftFrac * vw) + 'px';
-        } else {
-            // Mobile / no pair layout: clear the desktop block offset.
-            if (block) block.style.left = '';
-            // On mobile the portrait has no horizontal shift (centred), but we
-            // still track the block's vertical centre so the reveal stays
-            // glued to the contact content as the user scrolls. The mobile
-            // block bg is translucent (rgba(10,10,10,0.45) + blur), so the
-            // ink-reveal reads through the panel.
-            if (rect && vw < 1024) {
-                centerYFrac = (rect.top + rect.height / 2) / vh;
-            }
-        }
-
+        // Cover the frame via camera zoom (no mesh scaling -> resolve stays
+        // crisp). At zoom 1 the visible world height is visH; zoom shrinks it
+        // linearly, so making a world span W fill the frame needs zoom = visH/W
+        // (height) and zoom = visH*aspect/W (width); the max covers the frame.
+        var portraitWorldH = GRID_ROWS * INSTANCE_SIZE;
+        var pw = portraitWorldW || portraitWorldH;     // width measured in buildMesh
+        var visH = 2 * TARGET_CAMERA_Z * Math.tan((FOV / 2) * Math.PI / 180);
+        var aspect = (fw / fh) || 1;
+        camera.zoom = Math.max(visH / portraitWorldH, (visH * aspect) / pw);
+        camera.aspect = aspect;
         camera.updateProjectionMatrix();
-        var e = camera.projectionMatrix.elements;
-        e[8] = 1 - 2 * centerFrac;     // horizontal lens shift
-        e[9] = 2 * centerYFrac - 1;    // vertical lens shift
+        // No lens shift: projectionMatrix.elements[8]/[9] stay at their default
+        // 0, so the centred camera stays on-axis -> crisp, depth-aligned resolve.
     }
 
     /* ═══════════════════════════════════════════════════════════
@@ -552,22 +523,24 @@
        ═══════════════════════════════════════════════════════════ */
     function onResize() {
         if (!renderer) return;
-        var w = window.innerWidth;
-        var h = window.innerHeight;
+        mountCanvas();
+        // Size the drawing buffer to the canvas (the frame), not the window:
+        // the canvas is the render target and must match the frame 1:1 to stay
+        // crisp without depending on the (mobile-unstable) window inner size.
+        var w = canvas.clientWidth  || window.innerWidth;
+        var h = canvas.clientHeight || window.innerHeight;
         renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
         renderer.setSize(w, h, false);
-        camera.aspect = w / h;
-        camera.updateProjectionMatrix();
-        layoutPortrait();
+        layoutPortrait();   // sets camera.aspect + zoom + projection
         if (reduceMotion) updateVisibility();
     }
 
     /* ═══════════════════════════════════════════════════════════
        SCROLL → LAYOUT + RENDER GATING
        No progress is derived from scroll anymore — the reveal is a one-shot
-       IntersectionObserver-triggered tween (see attachTrigger). Scroll only
-       keeps the layout (lens shift) synced and gates the render loop to the
-       contact viewport.
+       IntersectionObserver-triggered tween (see attachTrigger). With the
+       canvas mounted in the frame, layout no longer depends on scroll, so
+       scroll here only gates the render loop to the contact viewport.
        ═══════════════════════════════════════════════════════════ */
     function onScroll() {
         layoutPortrait();
@@ -603,10 +576,14 @@
     }
 
     /* ═══════════════════════════════════════════════════════════
-       REVEAL TRIGGER — one-shot when contact is fully framed.
-       Adaptive threshold: when the section fits the viewport, require ~all
-       of it visible; when it's taller than the viewport, require the viewport
-       to be filled by the section (intersectionRatio = vh/sh).
+       REVEAL TRIGGER — one-shot when the portrait frame is in view.
+       The portrait lives in the small .contact-portrait frame in the head,
+       so we watch THAT element (not the whole section). A tall mobile section
+       can never "fill the viewport" reliably — dynamic toolbars shrink vh, so
+       gating on the section's full-frame intersectionRatio would never fire on
+       phones and the portrait stayed hidden. A modest threshold on the frame
+       fires the moment the portrait is actually seen. Falls back to the
+       section + adaptive threshold if the frame is absent.
        ═══════════════════════════════════════════════════════════ */
     function computeTriggerThreshold() {
         var sh = contactSection.offsetHeight || window.innerHeight;
@@ -625,7 +602,13 @@
             return;
         }
 
-        var threshold = computeTriggerThreshold();
+        // Watch the portrait frame itself: it is small and always shorter
+        // than the viewport, so a fixed modest threshold fires reliably on
+        // desktop AND mobile (where the tall section's full-frame ratio is
+        // unreachable). Fall back to the section if the frame is absent.
+        var frame = document.querySelector('#contactHead .contact-portrait');
+        var target = frame || contactSection;
+        var threshold = frame ? 0.4 : computeTriggerThreshold();
 
         if (!('IntersectionObserver' in window)) {
             startReveal();
@@ -640,13 +623,13 @@
                 }
             });
         }, { threshold: threshold });
-        obs.observe(contactSection);
+        obs.observe(target);
 
-        // Safety net: if the section is already fully framed on init (e.g.
-        // the page was reloaded while scrolled to contact), the observer may
-        // not re-fire — kick the reveal off manually.
+        // Safety net: if the target is already past the threshold on init
+        // (e.g. the page was reloaded while scrolled to contact), the observer
+        // may not re-fire — kick the reveal off manually.
         if (!revealStarted) {
-            var rect = contactSection.getBoundingClientRect();
+            var rect = target.getBoundingClientRect();
             var vh = window.innerHeight;
             var visibleTop = Math.max(0, rect.top);
             var visibleBottom = Math.min(vh, rect.bottom);

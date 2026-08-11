@@ -31,7 +31,6 @@ nav:
 
 # ---- HERO SECTION ----
 hero:
-  bg_text: "ENGINEER"
   tags:
     top: "SOFTWARE"
     bottom: "& SYSTEMS"
@@ -50,15 +49,9 @@ hero:
   social:
     - platform: "github"
       url: "https://github.com"
-      rotation: -8
-      float_class: "hero-social-float--github"
-      social_class: "hero-social--github"
       aria_label: "GitHub"
     - platform: "linkedin"
       url: "https://linkedin.com"
-      rotation: 6
-      float_class: "hero-social-float--linkedin"
-      social_class: "hero-social--linkedin"
       aria_label: "LinkedIn"
   meta:
     scroll_text: "SCROLL TO DECONSTRUCT"
@@ -100,7 +93,7 @@ about:
 
 # ---- PROJECTS SECTION ----
 projects:
-  bg_text: "WORK"
+  bg_text: "PROJECTS"
   heading:
     number: "02"
     line1: "SELECTED"
