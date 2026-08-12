@@ -1,0 +1,115 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+    <meta name="theme-color" content="#0a0a0a">
+    <meta name="robots" content="noindex, follow">
+    <title>404 — SIGNAL LOST / Ibrahim Faruquee</title>
+    <link rel="icon" type="image/svg+xml" href="assets/favicon.svg">
+    <style>
+        :root {
+            --bg: #0a0a0a;
+            --fg: #c8c2b8;
+            --fg-dim: #6b6560;
+            --fg-bright: #f2eee7;
+            --highlight: #e8c98c;
+            --border: #24221f;
+            --font-mono: 'Space Mono', 'Courier New', monospace;
+        }
+        *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+        html, body { height: 100%; }
+        body {
+            background: var(--bg);
+            color: var(--fg);
+            font-family: var(--font-mono);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: clamp(24px, 5vw, 60px);
+            background-image:
+                linear-gradient(var(--border) 1px, transparent 1px),
+                linear-gradient(90deg, var(--border) 1px, transparent 1px);
+            background-size: 48px 48px;
+            background-position: center;
+            -webkit-font-smoothing: antialiased;
+        }
+        .panel {
+            max-width: 640px;
+            width: 100%;
+            border: 1px solid var(--border);
+            background: rgba(10, 10, 10, 0.92);
+            padding: clamp(32px, 6vw, 64px);
+            text-align: left;
+        }
+        .eyebrow {
+            font-size: 11px;
+            letter-spacing: 0.3em;
+            text-transform: uppercase;
+            color: var(--highlight);
+            margin-bottom: 24px;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+        .eyebrow::after { content: ''; height: 1px; flex: 1; background: var(--border); }
+        .code {
+            font-size: clamp(72px, 18vw, 180px);
+            line-height: 0.85;
+            font-weight: 700;
+            color: var(--fg-bright);
+            letter-spacing: -0.04em;
+            margin-bottom: 8px;
+        }
+        .code span { color: var(--highlight); }
+        .msg {
+            font-size: 13px;
+            letter-spacing: 0.18em;
+            text-transform: uppercase;
+            color: var(--fg-dim);
+            margin-bottom: 28px;
+        }
+        .desc {
+            font-size: 14px;
+            line-height: 1.7;
+            color: var(--fg);
+            margin-bottom: 32px;
+            max-width: 48ch;
+        }
+        .links { display: flex; flex-wrap: wrap; gap: 12px; }
+        a.cta {
+            display: inline-flex;
+            align-items: center;
+            gap: 10px;
+            padding: 14px 22px;
+            border: 1px solid var(--border);
+            color: var(--fg-bright);
+            text-decoration: none;
+            font-size: 11px;
+            letter-spacing: 0.2em;
+            text-transform: uppercase;
+            transition: color 0.2s ease, border-color 0.2s ease, background 0.2s ease;
+        }
+        a.cta:hover { color: var(--bg); background: var(--highlight); border-color: var(--highlight); }
+        a.cta--ghost:hover { background: transparent; color: var(--highlight); border-color: var(--highlight); }
+        .meta { margin-top: 36px; font-size: 10px; letter-spacing: 0.2em; text-transform: uppercase; color: var(--fg-dim); }
+        @media (max-width: 480px) { .links { flex-direction: column; align-items: stretch; } }
+    </style>
+</head>
+
+<body>
+    <main class="panel">
+        <div class="eyebrow">SYS::404</div>
+        <div class="code">4<span>0</span>4</div>
+        <div class="msg">SIGNAL LOST // PAGE NOT FOUND</div>
+        <p class="desc">The route you requested isn't part of this build. The transmission ends here — but the rest of the system is still online. Pick a path back below.</p>
+        <nav class="links">
+            <a class="cta" href="/">← RETURN HOME</a>
+            <a class="cta cta--ghost" href="/diary.html">READ THE DEV DIARY</a>
+        </nav>
+        <div class="meta">ibrahimf1.github.io</div>
+    </main>
+</body>
+
+</html>

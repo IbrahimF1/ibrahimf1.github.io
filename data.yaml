@@ -164,6 +164,7 @@ projects:
       title: "HEAT:AWARE"
       description: "Real-time IoT heatstroke alert system with AI-driven notification engine. Won 1st Place in 'Strengthen Society' category for future vehicle safety application."
       image: "assets/projects/project3.jpeg"
+      image_webp: "assets/projects/project3.webp"
       image_alt: "IoT heatstroke alert system"
       repo_url: "https://github.com/KeiraJames/Heat-Aware"
       award: "1ST PLACE — STRENGTHEN SOCIETY"

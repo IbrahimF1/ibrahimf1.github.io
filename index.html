@@ -11,9 +11,18 @@
     <meta name="description"
         content="Ibrahim Faruquee — Software engineer specializing in full-stack web development, applied machine learning, and real-time systems.">
     <meta name="author" content="Ibrahim Faruquee">
-    <meta name="robots" content="index, follow">
+    <meta name="robots" content="index, follow, max-image-preview:large">
     <meta name="color-scheme" content="dark">
+    <meta name="application-name" content="Ibrahim Faruquee">
+    <meta name="keywords" content="Ibrahim Faruquee, software engineer, full-stack developer, machine learning engineer, MERN, React, Node.js, Python, real-time systems, New York, portfolio">
+    <meta name="geo.placename" content="New York, NY">
     <link rel="canonical" href="https://ibrahimf1.github.io/">
+    <!-- Resource hints: warm the CDN + Google Fonts connections before the
+         deferred scripts request them (saves DNS+TLS round-trips off first paint). -->
+    <link rel="preconnect" href="https://cdnjs.cloudflare.com" crossorigin>
+    <link rel="dns-prefetch" href="https://cdnjs.cloudflare.com">
+    <link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin>
+    <link rel="dns-prefetch" href="https://cdn.jsdelivr.net">
     <!-- Preload the YAML payload so its fetch is already in flight by the time
          the deferred scripts run — removes a network round-trip from the LCP path. -->
     <link rel="preload" href="data.yaml" as="fetch" crossorigin>
@@ -21,20 +30,27 @@
     <!-- Open Graph -->
     <meta property="og:title" content="Ibrahim Faruquee — Software Engineer">
     <meta property="og:description" content="Software engineer specializing in full-stack web development, applied machine learning, and real-time systems.">
-    <meta property="og:type" content="website">
+    <meta property="og:type" content="profile">
     <meta property="og:url" content="https://ibrahimf1.github.io/">
     <meta property="og:site_name" content="Ibrahim Faruquee">
     <meta property="og:locale" content="en_US">
-    <meta property="og:image" content="https://ibrahimf1.github.io/assets/projects/project1.png">
-    <meta property="og:image:alt" content="Selected projects by Ibrahim Faruquee">
+    <meta property="profile:first_name" content="Ibrahim">
+    <meta property="profile:last_name" content="Faruquee">
+    <meta property="og:image" content="https://ibrahimf1.github.io/assets/og-image.png">
+    <meta property="og:image:secure_url" content="https://ibrahimf1.github.io/assets/og-image.png">
+    <meta property="og:image:type" content="image/png">
+    <meta property="og:image:width" content="1200">
+    <meta property="og:image:height" content="630">
+    <meta property="og:image:alt" content="Ibrahim Faruquee — Software Engineer">
     <!-- Twitter -->
     <meta name="twitter:card" content="summary_large_image">
     <meta name="twitter:title" content="Ibrahim Faruquee — Software Engineer">
     <meta name="twitter:description" content="Software engineer specializing in full-stack web development, applied machine learning, and real-time systems.">
-    <meta name="twitter:image" content="https://ibrahimf1.github.io/assets/projects/project1.png">
-    <!-- Structured data (JSON-LD Person) -->
+    <meta name="twitter:image" content="https://ibrahimf1.github.io/assets/og-image.png">
+    <meta name="twitter:image:alt" content="Ibrahim Faruquee — Software Engineer">
+    <!-- Structured data (JSON-LD): ProfilePage + WebSite graph -->
     <script type="application/ld+json">
-    {"@context":"https://schema.org","@type":"Person","name":"Ibrahim Faruquee","url":"https://ibrahimf1.github.io/","image":"https://ibrahimf1.github.io/assets/profile_pic.png","jobTitle":"Software Engineer","email":"mailto:ifaruquee1@gmail.com","address":{"@type":"PostalAddress","addressLocality":"New York","addressRegion":"NY","addressCountry":"US"},"sameAs":["https://github.com/IbrahimF1","https://www.linkedin.com/in/ibrahim-f1"],"knowsAbout":["Full-Stack Development","Machine Learning","Real-Time Systems","Distributed Systems"]}
+    {"@context":"https://schema.org","@graph":[{"@type":"ProfilePage","@id":"https://ibrahimf1.github.io/#profilepage","url":"https://ibrahimf1.github.io/","name":"Ibrahim Faruquee — Software Engineer","inLanguage":"en-US","isPartOf":{"@id":"https://ibrahimf1.github.io/#website"},"mainEntity":{"@type":"Person","@id":"https://ibrahimf1.github.io/#person","name":"Ibrahim Faruquee","url":"https://ibrahimf1.github.io/","image":"https://ibrahimf1.github.io/assets/profile_pic.png","jobTitle":"Software Engineer","email":"mailto:ifaruquee1@gmail.com","address":{"@type":"PostalAddress","addressLocality":"New York","addressRegion":"NY","addressCountry":"US"},"sameAs":["https://github.com/IbrahimF1","https://www.linkedin.com/in/ibrahim-f1"],"knowsAbout":["Full-Stack Development","Machine Learning","Real-Time Systems","Distributed Systems"]}},{"@type":"WebSite","@id":"https://ibrahimf1.github.io/#website","url":"https://ibrahimf1.github.io/","name":"Ibrahim Faruquee","publisher":{"@id":"https://ibrahimf1.github.io/#person"},"inLanguage":"en-US"}]}
     </script>
     <!-- Ditherpunk favicon — static fallback, replaced at runtime by js/favicon.js -->
     <link rel="icon" type="image/svg+xml" href="assets/favicon.svg">
@@ -380,6 +396,12 @@
 </head>
 
 <body>
+    <!-- Accessibility: skip straight to content -->
+    <a href="#hero" class="skip-link">Skip to content</a>
+
+    <!-- Scroll progress rail (filled by main.js) -->
+    <div class="scroll-progress" aria-hidden="true"><div class="scroll-progress__bar" id="scrollProgress"></div></div>
+
     <!-- NOISE OVERLAY -->
     <div class="noise-overlay"></div>
 
@@ -421,6 +443,10 @@
             <div class="hero-name" id="heroName"><!-- populated from YAML --></div>
             <div class="hero-role" id="heroRole"><!-- populated from YAML --></div>
             <div class="hero-social-row" id="heroSocial"><!-- populated from YAML --></div>
+            <button class="hero-scroll-hint" id="heroScrollHint" type="button" aria-label="Scroll to about section">
+                <span class="hero-scroll-hint__label">SCROLL</span>
+                <span class="hero-scroll-hint__line" aria-hidden="true"></span>
+            </button>
         </div>
         <div class="hero-stats" id="heroStats"><!-- populated from YAML --></div>
     </section>
@@ -472,6 +498,15 @@
     <script src="js/attention-pulse.js" defer></script>
     <!-- Contact section point-cloud portrait (lazy-loads three.js itself) -->
     <script src="js/contact-cloud.js" defer></script>
+    <!-- Register the service worker for offline + instant repeat visits.
+         Loaded on idle so it never contends with first paint. -->
+    <script>
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', function () {
+                navigator.serviceWorker.register('sw.js').catch(function () { /* SW is a progressive enhancement */ });
+            });
+        }
+    </script>
 </body>
 
 </html>

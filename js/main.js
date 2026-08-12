@@ -499,6 +499,7 @@ function playStartupAnimation() {
         const nameLines = document.querySelectorAll('.hero-name .line');
         const role = document.querySelector('.hero-role');
         const socialRow = document.getElementById('heroSocial');
+        const scrollHint = document.getElementById('heroScrollHint');
         const eyebrow = document.querySelector('.hero-eyebrow');
         const stats = document.querySelectorAll('.hero-stat');
 
@@ -509,7 +510,7 @@ function playStartupAnimation() {
             finished = true;
             if (safety) clearTimeout(safety);
             try {
-                gsap.set([nav, role, socialRow, eyebrow, ...nameLines, ...stats].filter(Boolean), {
+                gsap.set([nav, role, socialRow, scrollHint, eyebrow, ...nameLines, ...stats].filter(Boolean), {
                     clearProps: 'opacity,transform,y,x,scale,rotation'
                 });
             } catch (_) {}
@@ -521,7 +522,7 @@ function playStartupAnimation() {
         };
 
         try {
-            gsap.set([nav, role, socialRow, eyebrow].filter(Boolean), { opacity: 0 });
+            gsap.set([nav, role, socialRow, scrollHint, eyebrow].filter(Boolean), { opacity: 0 });
             gsap.set(nameLines, { yPercent: 115 });
             gsap.set(stats, { opacity: 0, y: 24 });
 
@@ -533,6 +534,7 @@ function playStartupAnimation() {
               .to(nameLines, { yPercent: 0, duration: 0.9, ease: 'power4.out', stagger: 0.08 }, 0.45)
               .to(role, { opacity: 1, duration: 0.6, ease: 'power2.out' }, 0.9)
               .to(socialRow, { opacity: 1, duration: 0.5, ease: 'power2.out' }, 1.05)
+              .to(scrollHint || [], { opacity: 1, duration: 0.5, ease: 'power2.out' }, 1.15)
               .to(stats, { opacity: 1, y: 0, duration: 0.6, ease: 'power3.out', stagger: 0.08 }, 1.0)
               .add(animateCounters, 1.2);
 
@@ -743,17 +745,16 @@ function initAnimations(data) {
             scrollTrigger: { trigger: '#contactGrid', start: 'top 82%', toggleActions: 'play none none reverse' }
         });
 
-        // ---- MARQUEE velocity nudge ----
-        const tracks = document.querySelectorAll('.marquee-track');
-        ScrollTrigger.create({
-            trigger: 'body', start: 'top top', end: 'bottom bottom',
-            onUpdate: (self) => {
-                const v = Math.min(Math.abs(self.getVelocity()) / 4000, 1);
-                tracks.forEach(t => {
-                    t.style.animationPlayState = v > 0.6 ? 'running' : 'running';
+        // ---- MARQUEE: pause while off-screen to spare the compositor ----
+        const marqueeTracks = document.querySelectorAll('.marquee-track');
+        if (marqueeTracks.length && 'IntersectionObserver' in window) {
+            const mObs = new IntersectionObserver(function (entries) {
+                entries.forEach(function (e) {
+                    e.target.style.animationPlayState = e.isIntersecting ? 'running' : 'paused';
                 });
-            }
-        });
+            }, { rootMargin: '60px 0px' });
+            marqueeTracks.forEach(function (t) { mObs.observe(t); });
+        }
 
         // ---- BAYER BACKGROUND SYNC ----
         if (window.bayerBg) {
@@ -835,6 +836,93 @@ function refreshOnLazyImages() {
     });
 }
 
+// ---- SCROLL PROGRESS BAR ----
+// Compositor-only: a single transform:scaleX update per frame, batched via rAF.
+function initScrollProgress() {
+    const bar = document.getElementById('scrollProgress');
+    if (!bar) return;
+    let ticking = false;
+    const update = () => {
+        ticking = false;
+        const max = document.documentElement.scrollHeight - window.innerHeight;
+        bar.style.transform = `scaleX(${max > 0 ? Math.min(window.scrollY / max, 1) : 0})`;
+    };
+    window.addEventListener('scroll', () => {
+        if (!ticking) { ticking = true; requestAnimationFrame(update); }
+    }, { passive: true });
+    update();
+}
+
+// ---- HERO SCROLL HINT ----
+// Click (or Enter) jumps to the first content section; the hint also fades
+// out once the hero is scrolled away so it never lingers over content.
+function initScrollHint(data) {
+    const hint = document.getElementById('heroScrollHint');
+    if (!hint) return;
+    const firstContentId = (data.nav && data.nav[1] && data.nav[1].id) || 'about';
+    hint.addEventListener('click', () => {
+        const t = document.getElementById(firstContentId);
+        if (t && window.gsap) gsap.to(window, { scrollTo: { y: t, offsetY: 0 }, duration: 0.8, ease: 'power3.inOut' });
+        else if (t) t.scrollIntoView({ behavior: 'smooth' });
+    });
+    // Fade hint out past the hero.
+    const hero = document.getElementById('hero');
+    if (hero && window.gsap) {
+        gsap.to(hint, {
+            opacity: 0, ease: 'none',
+            scrollTrigger: { trigger: hero, start: 'top top', end: '25% top', scrub: true }
+        });
+    }
+}
+
+// ---- KEYBOARD SECTION NAVIGATION ----
+// Number keys 1–N jump to each section; Home/End go to top/bottom; PageUp/Down
+// step by viewport. Only fires when not typing in a field. Surfaces a toast so
+// the navigation is discoverable.
+function showToast(msg) {
+    let toast = document.querySelector('.toast');
+    if (!toast) {
+        toast = document.createElement('div');
+        toast.className = 'toast';
+        toast.setAttribute('role', 'status');
+        toast.setAttribute('aria-live', 'polite');
+        document.body.appendChild(toast);
+    }
+    toast.textContent = msg;
+    toast.classList.add('is-visible');
+    clearTimeout(toast._t);
+    toast._t = setTimeout(() => toast.classList.remove('is-visible'), 1600);
+}
+
+function initKeyboardNav(data) {
+    const ids = (data.nav || []).map(i => i.id).filter(Boolean);
+    if (!ids.length) return;
+    const isTyping = (e) => {
+        const t = e.target;
+        return t && (t.tagName === 'INPUT' || t.tagName === 'TEXTAREA' || t.isContentEditable);
+    };
+    document.addEventListener('keydown', (e) => {
+        if (isTyping(e) || e.metaKey || e.ctrlKey || e.altKey) return;
+        // Number keys → section jump
+        if (e.key >= '1' && e.key <= '9') {
+            const idx = parseInt(e.key, 10) - 1;
+            if (idx < ids.length) {
+                e.preventDefault();
+                const t = document.getElementById(ids[idx]);
+                if (t && window.gsap) gsap.to(window, { scrollTo: { y: t, offsetY: 0 }, duration: 0.8, ease: 'power3.inOut' });
+                const labels = (data.nav || []).map(i => i.label);
+                showToast('→ ' + (labels[idx] || ids[idx].toUpperCase()));
+            }
+            return;
+        }
+        if (e.key === 'Home') { e.preventDefault(); window.gsap ? gsap.to(window, { scrollTo: 0, duration: 0.6 }) : window.scrollTo(0, 0); return; }
+        if (e.key === 'End' && window.gsap) {
+            e.preventDefault();
+            gsap.to(window, { scrollTo: { y: document.documentElement.scrollHeight }, duration: 0.6 });
+        }
+    });
+}
+
 // ---- BOOTSTRAP ----
 (function bootstrap() {
     fetch('data.yaml')
@@ -874,10 +962,13 @@ function refreshOnLazyImages() {
 
             initCursor();
             initNavClock();
+            initScrollProgress();
 
             playStartupAnimation().then(() => {
                 updateProjectsTeasers();   // final split once fonts have settled, right at reveal
                 initAnimations(data);
+                initScrollHint(data);
+                initKeyboardNav(data);
                 refreshOnLazyImages();
                 // Sync dither windows after layout settles (DOM gen + font swap).
                 requestAnimationFrame(() => requestAnimationFrame(syncDitherHoles));

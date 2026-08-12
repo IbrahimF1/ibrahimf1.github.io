@@ -308,7 +308,7 @@
         inited = true;
 
         try {
-            renderer = new THREE.WebGLRenderer({ canvas: canvas, alpha: true, antialias: true });
+            renderer = new THREE.WebGLRenderer({ canvas: canvas, alpha: true, antialias: false });
         } catch (e) {
             console.warn('[contact-cloud] WebGL unavailable — disabled');
             return;

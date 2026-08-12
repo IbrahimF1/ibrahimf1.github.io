@@ -1422,6 +1422,115 @@ a:hover { color: var(--highlight); }
    ================================================================ */
 .is-hidden { opacity: 0; visibility: hidden; }
 
+/* ---- Skip link (keyboard accessibility) ---- */
+.skip-link {
+    position: fixed;
+    top: -100px;
+    left: 12px;
+    z-index: 10002;
+    padding: 10px 16px;
+    background: var(--highlight);
+    color: var(--bg);
+    font-size: 11px;
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+    text-decoration: none;
+    transition: top 0.2s ease;
+}
+.skip-link:focus { top: 12px; }
+
+/* ---- Scroll progress rail ----
+   Thin accent bar pinned under the nav that tracks page scroll
+   (driven from main.js). Pure transform for a compositor-only update. */
+.scroll-progress {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 2px;
+    z-index: 1001;
+    background: transparent;
+    pointer-events: none;
+}
+.scroll-progress__bar {
+    height: 100%;
+    width: 100%;
+    transform: scaleX(0);
+    transform-origin: 0 50%;
+    background: var(--highlight);
+    will-change: transform;
+}
+
+/* ---- Hero scroll-to-explore hint ----
+   Sits beside the social row; fades out on the hero parallax exit. */
+.hero-scroll-hint {
+    display: inline-flex;
+    align-items: center;
+    gap: 10px;
+    margin-top: clamp(14px, 2.2vh, 28px);
+    margin-left: clamp(10px, 1.6vw, 22px);
+    padding: 0;
+    background: none;
+    border: none;
+    cursor: pointer;
+    color: var(--fg-dim);
+    font-family: var(--font-mono);
+    font-size: 10px;
+    letter-spacing: 0.3em;
+    text-transform: uppercase;
+    -webkit-tap-highlight-color: transparent;
+    transition: color var(--transition-raw);
+}
+.hero-scroll-hint:hover { color: var(--fg-bright); }
+.hero-scroll-hint__line {
+    display: inline-block;
+    width: clamp(28px, 6vw, 70px);
+    height: 1px;
+    background: currentColor;
+    position: relative;
+    overflow: hidden;
+}
+.hero-scroll-hint__line::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: var(--highlight);
+    transform: translateX(-100%);
+    animation: scroll-hint-sweep 2.4s ease-in-out infinite;
+}
+@keyframes scroll-hint-sweep {
+    0% { transform: translateX(-100%); }
+    60%, 100% { transform: translateX(100%); }
+}
+@media (hover: none), (pointer: coarse) {
+    .hero-scroll-hint { display: none; }
+}
+@media (prefers-reduced-motion: reduce) {
+    .hero-scroll-hint__line::after { animation: none; opacity: 0.6; }
+}
+
+/* ---- Toast (inline, transient notices — keyboard nav feedback, etc.) ---- */
+.toast {
+    position: fixed;
+    left: 50%;
+    bottom: 28px;
+    transform: translate(-50%, 20px);
+    z-index: 10003;
+    padding: 10px 16px;
+    background: rgba(10, 10, 10, 0.9);
+    border: 1px solid var(--border-bright);
+    color: var(--fg-bright);
+    font-size: 11px;
+    letter-spacing: 0.2em;
+    text-transform: uppercase;
+    opacity: 0;
+    pointer-events: none;
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
+    transition: opacity 0.25s ease, transform 0.25s ease;
+}
+.toast.is-visible { opacity: 1; transform: translate(-50%, 0); }
+
 /* ================================================================
    RESPONSIVE
    ================================================================ */

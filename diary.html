@@ -11,26 +11,37 @@
     <meta name="description"
         content="Development journal of Ibrahim Faruquee — field notes on full-stack builds, applied machine learning, real-time systems, and the interfaces in between.">
     <meta name="author" content="Ibrahim Faruquee">
-    <meta name="robots" content="index, follow">
+    <meta name="robots" content="index, follow, max-image-preview:large">
     <meta name="color-scheme" content="dark">
+    <meta name="application-name" content="Ibrahim Faruquee — Dev Diary">
     <link rel="canonical" href="https://ibrahimf1.github.io/diary.html">
+    <link rel="preconnect" href="https://cdnjs.cloudflare.com" crossorigin>
+    <link rel="dns-prefetch" href="https://cdnjs.cloudflare.com">
+    <link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin>
+    <link rel="dns-prefetch" href="https://cdn.jsdelivr.net">
     <link rel="preload" href="diary/diary.yaml" as="fetch" crossorigin>
     <link rel="manifest" href="site.webmanifest">
     <!-- Open Graph -->
     <meta property="og:title" content="Dev Diary — Ibrahim Faruquee">
     <meta property="og:description" content="Field notes from the build — failures, fixes, and breakthroughs, logged raw.">
-    <meta property="og:type" content="website">
+    <meta property="og:type" content="article">
     <meta property="og:url" content="https://ibrahimf1.github.io/diary.html">
     <meta property="og:site_name" content="Ibrahim Faruquee">
     <meta property="og:locale" content="en_US">
-    <meta property="og:image" content="https://ibrahimf1.github.io/assets/projects/project1.png">
+    <meta property="og:image" content="https://ibrahimf1.github.io/assets/og-image.png">
+    <meta property="og:image:width" content="1200">
+    <meta property="og:image:height" content="630">
+    <meta property="og:image:alt" content="Dev Diary — Ibrahim Faruquee">
+    <meta property="article:author" content="Ibrahim Faruquee">
+    <meta property="article:section" content="Engineering">
     <!-- Twitter -->
-    <meta name="twitter:card" content="summary">
+    <meta name="twitter:card" content="summary_large_image">
     <meta name="twitter:title" content="Dev Diary — Ibrahim Faruquee">
     <meta name="twitter:description" content="Field notes from the build — failures, fixes, and breakthroughs, logged raw.">
-    <!-- Structured data -->
+    <meta name="twitter:image" content="https://ibrahimf1.github.io/assets/og-image.png">
+    <!-- Structured data: Blog + BreadcrumbList -->
     <script type="application/ld+json">
-    {"@context":"https://schema.org","@type":"Blog","name":"Dev Diary — Ibrahim Faruquee","url":"https://ibrahimf1.github.io/diary.html","author":{"@type":"Person","name":"Ibrahim Faruquee","url":"https://ibrahimf1.github.io/"}}
+    {"@context":"https://schema.org","@graph":[{"@type":"Blog","@id":"https://ibrahimf1.github.io/diary.html#blog","name":"Dev Diary — Ibrahim Faruquee","url":"https://ibrahimf1.github.io/diary.html","inLanguage":"en-US","author":{"@type":"Person","name":"Ibrahim Faruquee","url":"https://ibrahimf1.github.io/"},"publisher":{"@type":"Person","name":"Ibrahim Faruquee","url":"https://ibrahimf1.github.io/"}},{"@type":"BreadcrumbList","@id":"https://ibrahimf1.github.io/diary.html#breadcrumb","itemListElement":[{"@type":"ListItem","position":1,"name":"Home","item":"https://ibrahimf1.github.io/"},{"@type":"ListItem","position":2,"name":"Dev Diary","item":"https://ibrahimf1.github.io/diary.html"}]}]}
     </script>
     <!-- Ditherpunk favicon — static fallback, replaced at runtime by js/favicon.js -->
     <link rel="icon" type="image/svg+xml" href="assets/favicon.svg">
@@ -225,6 +236,9 @@
 </head>
 
 <body>
+    <!-- Accessibility: skip straight to the diary log -->
+    <a href="#diary" class="skip-link">Skip to content</a>
+
     <!-- NOISE OVERLAY -->
     <div class="noise-overlay"></div>
 
@@ -308,6 +322,13 @@
     <script src="js/bayer-background.js" defer></script>
     <script src="js/favicon.js" defer></script>
     <script src="js/diary.js" defer></script>
+    <script>
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', function () {
+                navigator.serviceWorker.register('sw.js').catch(function () {});
+            });
+        }
+    </script>
 </body>
 
 </html>
