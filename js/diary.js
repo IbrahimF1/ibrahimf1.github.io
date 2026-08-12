@@ -201,12 +201,20 @@
         // Media column
         if (entry.image) {
             const media = el('div', 'plate__media');
+            const picture = document.createElement('picture');
+            if (entry.image_webp) {
+                const source = document.createElement('source');
+                source.srcset = entry.image_webp;
+                source.type = 'image/webp';
+                picture.appendChild(source);
+            }
             const img = document.createElement('img');
             img.src = entry.image;
             img.alt = entry.image_alt || '';
             img.loading = 'lazy';
             img.decoding = 'async';
-            media.appendChild(img);
+            picture.appendChild(img);
+            media.appendChild(picture);
             ['tl', 'tr', 'bl', 'br'].forEach(c => media.appendChild(el('span', 'plate__tick plate__tick--' + c)));
             plate.appendChild(makeOpenable(media, entry));
         }
@@ -418,6 +426,10 @@
         const cursorDot = document.querySelector('.cursor-dot');
         const cursorRing = document.querySelector('.cursor-ring');
         if (isTouchDevice || !cursorDot || !cursorRing) return;
+
+        // Only hide the native cursor once the custom one is wired up — see
+        // the html.js-cursor-ready gate in the inline critical CSS.
+        document.documentElement.classList.add('js-cursor-ready');
 
         let cursorRevealed = false;
         const dotXTo = gsap.quickTo(cursorDot, 'x', { duration: 0.1, ease: 'power2.out' });

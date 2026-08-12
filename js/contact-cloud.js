@@ -542,9 +542,16 @@
        canvas mounted in the frame, layout no longer depends on scroll, so
        scroll here only gates the render loop to the contact viewport.
        ═══════════════════════════════════════════════════════════ */
+    // Batch scroll work into a single rAF so a burst of scroll events does
+    // one read/write pass instead of N synchronous layoutPortrait() calls.
+    var scrollRaf = 0;
     function onScroll() {
-        layoutPortrait();
-        updateVisibility();
+        if (scrollRaf) return;
+        scrollRaf = requestAnimationFrame(function () {
+            scrollRaf = 0;
+            layoutPortrait();
+            updateVisibility();
+        });
     }
 
     function contactIsInView() {

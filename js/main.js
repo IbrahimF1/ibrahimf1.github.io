@@ -279,9 +279,21 @@ function generateProjects(data) {
             ? `<span class="projects-tile__repo project-card-repo" aria-label="View source on GitHub">${SVG_ICONS.github_outlined}</span>`
             : '';
 
+        // Media: <video> for animated items, otherwise a <picture> with a
+        // WebP source and a raster fallback. Images/videos stay lazy.
+        const mediaHtml = p.video
+            ? `<video class="projects-tile__video" muted loop playsinline preload="none"
+                 poster="${p.video.poster || p.image || ''}" aria-label="${p.image_alt || p.title || ''}">
+                 <source src="${p.video.webm}" type="video/webm">
+                 <source src="${p.video.mp4}" type="video/mp4">
+               </video>`
+            : `<picture>${p.image_webp ? `<source srcset="${p.image_webp}" type="image/webp">` : ''}
+                 <img src="${p.image}" alt="${p.image_alt || ''}" loading="lazy" decoding="async">
+               </picture>`;
+
         tile.innerHTML = `
             <div class="projects-tile__media">
-                <img src="${p.image}" alt="${p.image_alt || ''}" loading="lazy">
+                ${mediaHtml}
             </div>
             <div class="projects-tile__scrim"></div>
             <div class="projects-tile__body">
@@ -303,6 +315,29 @@ function generateProjects(data) {
     // Initial teaser split from the tiles' rendered widths; refined on
     // font-ready / load / resize (see updateProjectsTeasers).
     updateProjectsTeasers();
+    initLazyVideos();
+}
+
+// Lazy project videos: only play while the tile is on screen (saves CPU +
+// battery), and never auto-play under prefers-reduced-motion (poster shows).
+function initLazyVideos() {
+    const videos = document.querySelectorAll('.projects-tile__video');
+    if (!videos.length) return;
+    const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    if (reduceMotion || !('IntersectionObserver' in window)) return;
+    const io = new IntersectionObserver((entries) => {
+        entries.forEach(e => {
+            const v = e.target;
+            if (e.isIntersecting) {
+                if (v.readyState === 0) v.load();
+                const p = v.play();
+                if (p && p.catch) p.catch(() => {});
+            } else {
+                v.pause();
+            }
+        });
+    }, { rootMargin: '100px 0px', threshold: 0.05 });
+    videos.forEach(v => io.observe(v));
 }
 
 function generateExperience(data) {
@@ -387,6 +422,10 @@ function initCursor() {
     const dot = document.querySelector('.cursor-dot');
     const ring = document.querySelector('.cursor-ring');
     if (isTouch || !dot || !ring) return;
+
+    // Only hide the native cursor once the custom one is actually wired up,
+    // so a failed/blocking CDN load still leaves the user with a pointer.
+    document.documentElement.classList.add('js-cursor-ready');
 
     let revealed = false;
     const dx = gsap.quickTo(dot, 'x', { duration: 0.1, ease: 'power2.out' });
@@ -526,16 +565,38 @@ function initAnimations(data) {
     // ---- HAMBURGER ----
     const hamburger = document.querySelector('.nav-hamburger');
     const mobileMenu = document.querySelector('.mobile-menu');
-    const mobileLinks = document.querySelectorAll('.mobile-menu-link');
+    const mobileLinks = Array.from(document.querySelectorAll('.mobile-menu-link'));
+    let menuLastFocused = null;
+
+    function setMenu(open) {
+        if (!mobileMenu || !hamburger) return;
+        const wasOpen = mobileMenu.classList.contains('is-open');
+        mobileMenu.classList.toggle('is-open', open);
+        hamburger.classList.toggle('is-active', open);
+        hamburger.setAttribute('aria-expanded', String(open));
+        mobileMenu.setAttribute('aria-hidden', String(!open));
+        document.body.style.overflow = open ? 'hidden' : '';
+        if (open) {
+            menuLastFocused = document.activeElement;
+            requestAnimationFrame(() => mobileLinks[0] && mobileLinks[0].focus());
+        } else if (wasOpen && menuLastFocused && menuLastFocused.focus) {
+            menuLastFocused.focus();
+        }
+    }
 
     if (hamburger && mobileMenu) {
         hamburger.addEventListener('click', () => {
-            const open = mobileMenu.classList.contains('is-open');
-            mobileMenu.classList.toggle('is-open', !open);
-            hamburger.classList.toggle('is-active', !open);
-            hamburger.setAttribute('aria-expanded', String(!open));
-            mobileMenu.setAttribute('aria-hidden', String(open));
-            document.body.style.overflow = open ? '' : 'hidden';
+            setMenu(!mobileMenu.classList.contains('is-open'));
+        });
+        // Escape closes; Tab is trapped inside the menu while it is open.
+        document.addEventListener('keydown', (e) => {
+            if (!mobileMenu.classList.contains('is-open')) return;
+            if (e.key === 'Escape') { e.preventDefault(); setMenu(false); hamburger.focus(); return; }
+            if (e.key === 'Tab' && mobileLinks.length) {
+                const first = mobileLinks[0], last = mobileLinks[mobileLinks.length - 1];
+                if (e.shiftKey && document.activeElement === first) { e.preventDefault(); last.focus(); }
+                else if (!e.shiftKey && document.activeElement === last) { e.preventDefault(); first.focus(); }
+            }
         });
     }
 
@@ -557,13 +618,7 @@ function initAnimations(data) {
             if (!href.startsWith('#')) return;
             e.preventDefault();
             const id = href.replace('#', '');
-            if (mobileMenu && mobileMenu.classList.contains('is-open')) {
-                mobileMenu.classList.remove('is-open');
-                hamburger && hamburger.classList.remove('is-active');
-                hamburger && hamburger.setAttribute('aria-expanded', 'false');
-                mobileMenu.setAttribute('aria-hidden', 'true');
-                document.body.style.overflow = '';
-            }
+            if (mobileMenu && mobileMenu.classList.contains('is-open')) setMenu(false);
             scrollTo(id);
         });
     });

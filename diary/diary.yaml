@@ -33,6 +33,7 @@ diary:
       date: "2026.06.12"
       title: "WHY ONE INTERFACE FELT WRONG"
       image: "assets/projects/project1.png"
+      image_webp: "assets/projects/project1.webp"
       image_alt: "Side-by-side parent control view and child story view from FaceyBuk"
       summary: >-
         FaceyBuk's shared parent/child UI technically worked — until splitting
@@ -46,7 +47,7 @@ diary:
     - index: "02"
       date: "2026.05.28"
       title: "3D MARKERS FROM A FLAT SCREENSHOT"
-      image: "assets/projects/project2.gif"
+      image: "assets/projects/project2-poster.jpg"
       image_alt: "SceneSplat 3D viewport with labeled evidence markers placed in world space"
       summary: >-
         Gemini finds evidence in 2D. Dropping those detections back into world

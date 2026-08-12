@@ -9,7 +9,29 @@
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <title>DEV_DIARY://LOG</title>
     <meta name="description"
-        content="Development journal of John Doe — field notes on distributed systems, low-level architecture, and the interfaces in between.">
+        content="Development journal of Ibrahim Faruquee — field notes on full-stack builds, applied machine learning, real-time systems, and the interfaces in between.">
+    <meta name="author" content="Ibrahim Faruquee">
+    <meta name="robots" content="index, follow">
+    <meta name="color-scheme" content="dark">
+    <link rel="canonical" href="https://ibrahimf1.github.io/diary.html">
+    <link rel="preload" href="diary/diary.yaml" as="fetch" crossorigin>
+    <link rel="manifest" href="site.webmanifest">
+    <!-- Open Graph -->
+    <meta property="og:title" content="Dev Diary — Ibrahim Faruquee">
+    <meta property="og:description" content="Field notes from the build — failures, fixes, and breakthroughs, logged raw.">
+    <meta property="og:type" content="website">
+    <meta property="og:url" content="https://ibrahimf1.github.io/diary.html">
+    <meta property="og:site_name" content="Ibrahim Faruquee">
+    <meta property="og:locale" content="en_US">
+    <meta property="og:image" content="https://ibrahimf1.github.io/assets/projects/project1.png">
+    <!-- Twitter -->
+    <meta name="twitter:card" content="summary">
+    <meta name="twitter:title" content="Dev Diary — Ibrahim Faruquee">
+    <meta name="twitter:description" content="Field notes from the build — failures, fixes, and breakthroughs, logged raw.">
+    <!-- Structured data -->
+    <script type="application/ld+json">
+    {"@context":"https://schema.org","@type":"Blog","name":"Dev Diary — Ibrahim Faruquee","url":"https://ibrahimf1.github.io/diary.html","author":{"@type":"Person","name":"Ibrahim Faruquee","url":"https://ibrahimf1.github.io/"}}
+    </script>
     <!-- Ditherpunk favicon — static fallback, replaced at runtime by js/favicon.js -->
     <link rel="icon" type="image/svg+xml" href="assets/favicon.svg">
     <link rel="apple-touch-icon" href="assets/favicon.svg">
@@ -67,9 +89,10 @@
             font-size: 14px;
             line-height: 1.6;
             overflow-x: hidden;
-            cursor: none;
             position: relative
         }
+
+        html.js-cursor-ready body { cursor: none; }
 
         #bayer-bg {
             position: fixed;

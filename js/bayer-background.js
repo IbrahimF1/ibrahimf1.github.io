@@ -349,7 +349,13 @@
     gl.uniform2f(loc.uResolution, canvas.width, canvas.height);
     gl.uniform1f(loc.uPixelSize, PIXEL_SIZE * dpr);
   }
-  window.addEventListener('resize', resize);
+  // Debounce resize: canvas backing-store realloc + uniform reset only after
+  // the user stops dragging the window, not on every intermediate frame.
+  var resizeTimer = null;
+  window.addEventListener('resize', function () {
+    if (resizeTimer) clearTimeout(resizeTimer);
+    resizeTimer = setTimeout(resize, 150);
+  });
   resize();
 
   /* ═══════════════════════════════════════════════════════════
@@ -472,7 +478,11 @@
   var t0 = performance.now();
   var lastFrameTime = t0;
 
-  (function frame() {
+  // Pause the render loop while the tab is hidden — browsers throttle rAF to
+  // ~1Hz in background anyway, so this avoids burning GPU/battery on a canvas
+  // nobody is looking at.
+  var rafId = null;
+  function frame() {
     var now = performance.now();
     var dt = Math.min((now - lastFrameTime) * 0.001, 0.1); // cap at 100ms
     lastFrameTime = now;
@@ -506,8 +516,12 @@
     gl.uniform1f(loc.uInteractive, smoothInteractive);
 
     gl.drawArrays(gl.TRIANGLES, 0, 3);
-    requestAnimationFrame(frame);
-  })();
+    rafId = requestAnimationFrame(frame);
+  }
+  function start() { if (rafId == null) { lastFrameTime = performance.now(); rafId = requestAnimationFrame(frame); } }
+  function stop() { if (rafId != null) { cancelAnimationFrame(rafId); rafId = null; } }
+  document.addEventListener('visibilitychange', function () { if (document.hidden) stop(); else start(); });
+  start();
 
   console.log('[bayer-bg] ✓ WebGL2 Bayer diamond dithering initialized');
 })();

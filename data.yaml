@@ -129,6 +129,7 @@ projects:
       title: "FACEY:BUK"
       description: "1st place-winning interactive storytelling app allowing parents to read bedtime stories to their children in real time. Integrated WebRTC, Socket.IO, and ElevenLabs API for immersive experiences."
       image: "assets/projects/project1.png"
+      image_webp: "assets/projects/project1.webp"
       image_alt: "Interactive storytelling app"
       repo_url: "https://github.com/KeiraJames/nyu-hacks"
       award: "1ST PLACE — NYU HACKS"
@@ -143,8 +144,12 @@ projects:
     - index: "02"
       title: "SCENE:SPAT"
       description: "Forensic investigation platform that automatically detects evidence in 3D scenes using Google Gemini Vision API. Won 1st Place in 24-hour hackathon with 2D-to-3D coordinate mapping algorithm."
-      image: "assets/projects/project2.gif"
+      image: "assets/projects/project2-poster.jpg"
       image_alt: "3D forensic analysis platform"
+      video:
+        webm: "assets/projects/project2.webm"
+        mp4: "assets/projects/project2.mp4"
+        poster: "assets/projects/project2-poster.jpg"
       repo_url: "https://github.com/bshiribaiev/scene-splat"
       award: "1ST PLACE — 24H HACKATHON"
       tags:

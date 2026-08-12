@@ -10,6 +10,32 @@
     <title>IBRAHIM FARUQUEE / SOFTWARE ENGINEER</title>
     <meta name="description"
         content="Ibrahim Faruquee — Software engineer specializing in full-stack web development, applied machine learning, and real-time systems.">
+    <meta name="author" content="Ibrahim Faruquee">
+    <meta name="robots" content="index, follow">
+    <meta name="color-scheme" content="dark">
+    <link rel="canonical" href="https://ibrahimf1.github.io/">
+    <!-- Preload the YAML payload so its fetch is already in flight by the time
+         the deferred scripts run — removes a network round-trip from the LCP path. -->
+    <link rel="preload" href="data.yaml" as="fetch" crossorigin>
+    <link rel="manifest" href="site.webmanifest">
+    <!-- Open Graph -->
+    <meta property="og:title" content="Ibrahim Faruquee — Software Engineer">
+    <meta property="og:description" content="Software engineer specializing in full-stack web development, applied machine learning, and real-time systems.">
+    <meta property="og:type" content="website">
+    <meta property="og:url" content="https://ibrahimf1.github.io/">
+    <meta property="og:site_name" content="Ibrahim Faruquee">
+    <meta property="og:locale" content="en_US">
+    <meta property="og:image" content="https://ibrahimf1.github.io/assets/projects/project1.png">
+    <meta property="og:image:alt" content="Selected projects by Ibrahim Faruquee">
+    <!-- Twitter -->
+    <meta name="twitter:card" content="summary_large_image">
+    <meta name="twitter:title" content="Ibrahim Faruquee — Software Engineer">
+    <meta name="twitter:description" content="Software engineer specializing in full-stack web development, applied machine learning, and real-time systems.">
+    <meta name="twitter:image" content="https://ibrahimf1.github.io/assets/projects/project1.png">
+    <!-- Structured data (JSON-LD Person) -->
+    <script type="application/ld+json">
+    {"@context":"https://schema.org","@type":"Person","name":"Ibrahim Faruquee","url":"https://ibrahimf1.github.io/","image":"https://ibrahimf1.github.io/assets/profile_pic.png","jobTitle":"Software Engineer","email":"mailto:ifaruquee1@gmail.com","address":{"@type":"PostalAddress","addressLocality":"New York","addressRegion":"NY","addressCountry":"US"},"sameAs":["https://github.com/IbrahimF1","https://www.linkedin.com/in/ibrahim-f1"],"knowsAbout":["Full-Stack Development","Machine Learning","Real-Time Systems","Distributed Systems"]}
+    </script>
     <!-- Ditherpunk favicon — static fallback, replaced at runtime by js/favicon.js -->
     <link rel="icon" type="image/svg+xml" href="assets/favicon.svg">
     <link rel="apple-touch-icon" href="assets/favicon.svg">
@@ -69,10 +95,14 @@
             font-size: 14px;
             line-height: 1.5;
             overflow-x: hidden;
-            cursor: none;
             position: relative;
             -webkit-font-smoothing: antialiased
         }
+
+        /* Custom cursor hides the native one only once JS confirms it is ready
+           (html.js-cursor-ready), so a failed/blocking script load still leaves
+           the user with a usable pointer. */
+        html.js-cursor-ready body { cursor: none; }
 
         #bayer-bg {
             position: fixed;

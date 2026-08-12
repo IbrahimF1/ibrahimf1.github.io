@@ -1,0 +1,16 @@
+{
+  "name": "Ibrahim Faruquee — Software Engineer",
+  "short_name": "Ibrahim F.",
+  "description": "Portfolio of Ibrahim Faruquee — software engineer specializing in full-stack web development, applied machine learning, and real-time systems.",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#0a0a0a",
+  "theme_color": "#0a0a0a",
+  "lang": "en",
+  "icons": [
+    { "src": "assets/favicon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any" },
+    { "src": "assets/favicon.svg", "sizes": "192x192 512x512", "type": "image/svg+xml", "purpose": "maskable" }
+  ]
+}
