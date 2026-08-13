@@ -1,0 +1,44 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom">
+  <channel>
+    <title>Dev Diary — Ibrahim Faruquee</title>
+    <link>https://ibrahimf1.github.io/diary.html</link>
+    <description>Development journal of Ibrahim Faruquee — field notes on full-stack builds, applied machine learning, real-time systems, and the interfaces in between.</description>
+    <language>en-us</language>
+    <lastBuildDate>Thu, 13 Aug 2026 00:00:00 GMT</lastBuildDate>
+    <atom:link href="https://ibrahimf1.github.io/rss.xml" rel="self" type="application/rss+xml"/>
+
+    <item>
+      <title>WHY ONE INTERFACE FELT WRONG</title>
+      <link>https://ibrahimf1.github.io/diary.html</link>
+      <guid isPermaLink="false">https://ibrahimf1.github.io/diary.html#entry-01</guid>
+      <pubDate>12 Jun 2026 00:00:00 GMT</pubDate>
+      <description><![CDATA[FaceyBuk's shared parent/child UI technically worked — until splitting it by role turned a video call into a shared room. Same story, two intents.]]></description>
+      <category>UX</category>
+      <category>WEBRTC</category>
+      <category>ROLE</category>
+    </item>
+
+    <item>
+      <title>3D MARKERS FROM A FLAT SCREENSHOT</title>
+      <link>https://ibrahimf1.github.io/diary.html</link>
+      <guid isPermaLink="false">https://ibrahimf1.github.io/diary.html#entry-02</guid>
+      <pubDate>28 May 2026 00:00:00 GMT</pubDate>
+      <description><![CDATA[Gemini finds evidence in 2D. Dropping those detections back into world space without raycasting the whole scene to death is the entire job.]]></description>
+      <category>THREE.JS</category>
+      <category>PERF</category>
+      <category>AI</category>
+    </item>
+
+    <item>
+      <title>WHEN TO TRUST A SINGLE THRESHOLD</title>
+      <link>https://ibrahimf1.github.io/diary.html</link>
+      <guid isPermaLink="false">https://ibrahimf1.github.io/diary.html#entry-03</guid>
+      <pubDate>03 May 2026 00:00:00 GMT</pubDate>
+      <description><![CDATA[Heat Aware's simplest version — one number, one phone call — is the feature, not the bug. Here's where a bare threshold holds up, and where it quietly doesn't.]]></description>
+      <category>IOT</category>
+      <category>ARCHITECTURE</category>
+      <category>OPINION</category>
+    </item>
+  </channel>
+</rss>

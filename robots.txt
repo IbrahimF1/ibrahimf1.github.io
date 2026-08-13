@@ -2,3 +2,4 @@ User-agent: *
 Allow: /
 
 Sitemap: https://ibrahimf1.github.io/sitemap.xml
+Feed: https://ibrahimf1.github.io/rss.xml

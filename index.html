@@ -17,6 +17,11 @@
     <meta name="keywords" content="Ibrahim Faruquee, software engineer, full-stack developer, machine learning engineer, MERN, React, Node.js, Python, real-time systems, New York, portfolio">
     <meta name="geo.placename" content="New York, NY">
     <link rel="canonical" href="https://ibrahimf1.github.io/">
+    <!-- Identity verification + feed discovery -->
+    <link rel="me" href="https://github.com/IbrahimF1">
+    <link rel="me" href="https://www.linkedin.com/in/ibrahim-f1">
+    <link rel="alternate" type="application/rss+xml" title="Dev Diary — Ibrahim Faruquee" href="https://ibrahimf1.github.io/rss.xml">
+    <link rel="author" href="mailto:ifaruquee1@gmail.com">
     <!-- Resource hints: warm the CDN + Google Fonts connections before the
          deferred scripts request them (saves DNS+TLS round-trips off first paint). -->
     <link rel="preconnect" href="https://cdnjs.cloudflare.com" crossorigin>
@@ -48,9 +53,53 @@
     <meta name="twitter:description" content="Software engineer specializing in full-stack web development, applied machine learning, and real-time systems.">
     <meta name="twitter:image" content="https://ibrahimf1.github.io/assets/og-image.png">
     <meta name="twitter:image:alt" content="Ibrahim Faruquee — Software Engineer">
-    <!-- Structured data (JSON-LD): ProfilePage + WebSite graph -->
+    <!-- Structured data (JSON-LD): ProfilePage + WebSite + BreadcrumbList graph -->
     <script type="application/ld+json">
-    {"@context":"https://schema.org","@graph":[{"@type":"ProfilePage","@id":"https://ibrahimf1.github.io/#profilepage","url":"https://ibrahimf1.github.io/","name":"Ibrahim Faruquee — Software Engineer","inLanguage":"en-US","isPartOf":{"@id":"https://ibrahimf1.github.io/#website"},"mainEntity":{"@type":"Person","@id":"https://ibrahimf1.github.io/#person","name":"Ibrahim Faruquee","url":"https://ibrahimf1.github.io/","image":"https://ibrahimf1.github.io/assets/profile_pic.png","jobTitle":"Software Engineer","email":"mailto:ifaruquee1@gmail.com","address":{"@type":"PostalAddress","addressLocality":"New York","addressRegion":"NY","addressCountry":"US"},"sameAs":["https://github.com/IbrahimF1","https://www.linkedin.com/in/ibrahim-f1"],"knowsAbout":["Full-Stack Development","Machine Learning","Real-Time Systems","Distributed Systems"]}},{"@type":"WebSite","@id":"https://ibrahimf1.github.io/#website","url":"https://ibrahimf1.github.io/","name":"Ibrahim Faruquee","publisher":{"@id":"https://ibrahimf1.github.io/#person"},"inLanguage":"en-US"}]}
+    {
+      "@context": "https://schema.org",
+      "@graph": [
+        {
+          "@type": "ProfilePage",
+          "@id": "https://ibrahimf1.github.io/#profilepage",
+          "url": "https://ibrahimf1.github.io/",
+          "name": "Ibrahim Faruquee — Software Engineer",
+          "inLanguage": "en-US",
+          "isPartOf": { "@id": "https://ibrahimf1.github.io/#website" },
+          "mainEntity": {
+            "@type": "Person",
+            "@id": "https://ibrahimf1.github.io/#person",
+            "name": "Ibrahim Faruquee",
+            "url": "https://ibrahimf1.github.io/",
+            "image": "https://ibrahimf1.github.io/assets/profile_pic.png",
+            "jobTitle": "Software Engineer",
+            "description": "Software engineer specializing in full-stack web development, applied machine learning, and real-time systems.",
+            "email": "mailto:ifaruquee1@gmail.com",
+            "address": { "@type": "PostalAddress", "addressLocality": "New York", "addressRegion": "NY", "addressCountry": "US" },
+            "sameAs": [
+              "https://github.com/IbrahimF1",
+              "https://www.linkedin.com/in/ibrahim-f1"
+            ],
+            "knowsAbout": ["Full-Stack Development","Machine Learning","Real-Time Systems","Distributed Systems"]
+          }
+        },
+        {
+          "@type": "WebSite",
+          "@id": "https://ibrahimf1.github.io/#website",
+          "url": "https://ibrahimf1.github.io/",
+          "name": "Ibrahim Faruquee",
+          "publisher": { "@id": "https://ibrahimf1.github.io/#person" },
+          "inLanguage": "en-US"
+        },
+        {
+          "@type": "BreadcrumbList",
+          "@id": "https://ibrahimf1.github.io/#breadcrumb",
+          "itemListElement": [
+            { "@type": "ListItem", "position": 1, "name": "Home", "item": "https://ibrahimf1.github.io/" },
+            { "@type": "ListItem", "position": 2, "name": "Dev Diary", "item": "https://ibrahimf1.github.io/diary.html" }
+          ]
+        }
+      ]
+    }
     </script>
     <!-- Ditherpunk favicon — static fallback, replaced at runtime by js/favicon.js -->
     <link rel="icon" type="image/svg+xml" href="assets/favicon.svg">
@@ -58,8 +107,11 @@
     <link rel="preload" href="fonts/Datatype.wdth.wght.woff2" as="font" type="font/woff2" crossorigin>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Space+Mono:ital,wght@0,400;0,700;1,400;1,700&display=swap"
-        rel="stylesheet">
+    <!-- Non-render-blocking web fonts: load Space Mono async via the print→all
+         swap so it never blocks first paint. Falls back to Courier New (declared
+         in --font-mono) until it arrives. <noscript> keeps it for no-JS. -->
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Space+Mono:ital,wght@0,400;0,700;1,400;1,700&display=swap" media="print" onload="this.media='all'">
+    <noscript><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Space+Mono:ital,wght@0,400;0,700;1,400;1,700&display=swap"></noscript>
     <style>
         /* Critical CSS — inlined for faster first paint */
         @font-face {
@@ -391,6 +443,7 @@
         }
     </style>
     <link rel="stylesheet" href="css/style.css">
+    <link rel="stylesheet" href="css/print.css" media="print">
     <!-- Umami analytics -->
     <script defer src="https://cloud.umami.is/script.js" data-website-id="5cc65dfa-2570-4543-b045-535f415f3fdd"></script>
 </head>
@@ -401,6 +454,11 @@
 
     <!-- Scroll progress rail (filled by main.js) -->
     <div class="scroll-progress" aria-hidden="true"><div class="scroll-progress__bar" id="scrollProgress"></div></div>
+
+    <!-- Back to top — appears after the hero, hidden until scrolled (main.js) -->
+    <button class="back-to-top" id="backToTop" type="button" aria-label="Back to top" data-cursor="link">
+        <span aria-hidden="true">&uarr;</span>
+    </button>
 
     <!-- NOISE OVERLAY -->
     <div class="noise-overlay"></div>

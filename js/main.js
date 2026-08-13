@@ -417,6 +417,10 @@ function generateContact(data) {
 
 // ---- CURSOR ----
 function initCursor() {
+    // Graceful degradation: if the GSAP CDN is blocked/unavailable, skip the
+    // custom cursor entirely. Throwing here would abort bootstrap before the
+    // startup overlay is removed, leaving a blank page. (Mirrors diary.js.)
+    if (typeof gsap === 'undefined' || typeof ScrollTrigger === 'undefined' || typeof ScrollToPlugin === 'undefined') return;
     gsap.registerPlugin(ScrollTrigger, ScrollToPlugin);
     const isTouch = window.matchMedia('(hover: none), (pointer: coarse)').matches;
     const dot = document.querySelector('.cursor-dot');
@@ -446,17 +450,21 @@ function initCursor() {
 
 // ---- STAT COUNTERS (odometer-style count-up) ----
 function animateCounters() {
+    // Robust against a blocked GSAP CDN: render the final value directly so the
+    // stat bar is never stuck at 0 even when the count-up tween can't run.
+    const html = (v, suffix) => Math.round(v) + (suffix ? `<span class="suffix">${suffix}</span>` : '');
+    const hasGsap = typeof gsap !== 'undefined';
     document.querySelectorAll('.hero-stat-num').forEach(el => {
         const to = parseInt(el.dataset.count, 10) || 0;
         const suffix = el.dataset.suffix || '';
-        if (!to) { el.innerHTML = `0${suffix ? `<span class="suffix">${suffix}</span>` : ''}`; return; }
+        if (!to || !hasGsap) { el.innerHTML = html(to, suffix); return; }
         const obj = { v: 0 };
         gsap.to(obj, {
             v: to,
             duration: 1.8,
             ease: 'power3.out',
             onUpdate: () => {
-                el.innerHTML = Math.round(obj.v) + (suffix ? `<span class="suffix">${suffix}</span>` : '');
+                el.innerHTML = html(obj.v, suffix);
             }
         });
     });
@@ -548,6 +556,10 @@ function playStartupAnimation() {
 
 // ---- ANIMATIONS ----
 function initAnimations(data) {
+    // Graceful degradation: without GSAP/ScrollTrigger, skip all motion. Content
+    // stays fully visible (the gsap.from() calls below never run, so no element
+    // is ever parked at opacity:0). Native anchor links + CSS still work.
+    if (typeof gsap === 'undefined' || typeof ScrollTrigger === 'undefined') return;
     const isTouch = window.matchMedia('(hover: none), (pointer: coarse)').matches;
     const dot = document.querySelector('.cursor-dot');
     const ring = document.querySelector('.cursor-ring');
@@ -853,6 +865,28 @@ function initScrollProgress() {
     update();
 }
 
+// ---- BACK TO TOP ----
+// Reveals a floating control once the hero is scrolled past, and smoothly
+// returns to the top. rAF-batched + passive so it never janks the main thread.
+function initBackToTop() {
+    const btn = document.getElementById('backToTop');
+    if (!btn) return;
+    let ticking = false;
+    const threshold = Math.max(window.innerHeight * 0.9, 400);
+    const update = () => {
+        ticking = false;
+        btn.classList.toggle('is-visible', window.scrollY > threshold);
+    };
+    window.addEventListener('scroll', () => {
+        if (!ticking) { ticking = true; requestAnimationFrame(update); }
+    }, { passive: true });
+    btn.addEventListener('click', () => {
+        if (typeof gsap !== 'undefined') gsap.to(window, { scrollTo: 0, duration: 0.7, ease: 'power3.inOut' });
+        else window.scrollTo({ top: 0, behavior: 'smooth' });
+    });
+    update();
+}
+
 // ---- HERO SCROLL HINT ----
 // Click (or Enter) jumps to the first content section; the hint also fades
 // out once the hero is scrolled away so it never lingers over content.
@@ -963,6 +997,7 @@ function initKeyboardNav(data) {
             initCursor();
             initNavClock();
             initScrollProgress();
+            initBackToTop();
 
             playStartupAnimation().then(() => {
                 updateProjectsTeasers();   // final split once fonts have settled, right at reveal

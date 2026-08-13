@@ -21,7 +21,7 @@
 diary:
   page:
     title: "DEV_DIARY://LOG"
-    description: "Development journal of John Doe — field notes on distributed systems, low-level architecture, and the interfaces in between."
+    description: "Development journal of Ibrahim Faruquee — field notes on full-stack builds, applied machine learning, real-time systems, and the interfaces in between."
     bg_text: "DIARY"
     intro: >-
       Field notes from the build. Failures, fixes, and the occasional

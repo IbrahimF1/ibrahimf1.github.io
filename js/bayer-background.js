@@ -19,6 +19,16 @@
 (function () {
   'use strict';
 
+  /* Respect Save-Data / reduced-data: the animated WebGL background is a
+     decorative enhancement, not content. Skipping it on metered connections
+     avoids a steady GPU + compositing cost (and the site still looks correct —
+     section veils fall back to the solid page background where the dither
+     window sat). */
+  if (window.matchMedia && window.matchMedia('(prefers-reduced-data: reduce)').matches) {
+    console.log('[bayer-bg] skipped — prefers-reduced-data');
+    return;
+  }
+
   /* ═══════════════════════════════════════════════════════════
      CONFIGURATION
      ═══════════════════════════════════════════════════════════ */

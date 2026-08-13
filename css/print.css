@@ -1,0 +1,161 @@
+/* ============================================================
+   PRINT STYLESHEET
+   ------------------------------------------------------------
+   A clean, legible, ink-friendly hard copy of the portfolio and
+   the dev diary. Hides purely decorative/animated layers, forces
+   a high-contrast palette, expands hover-gated content (project
+   descriptions + tags) so nothing is lost on paper, and appends
+   link URLs so a printed copy stays actionable.
+   ============================================================ */
+
+@media print {
+    :root { --pad: 24px; }
+
+    /* Force a high-contrast, economical palette. */
+    html, body {
+        background: #fff !important;
+        color: #111 !important;
+        font-size: 11pt;
+        line-height: 1.45;
+    }
+
+    /* Strip decorative effects that cost ink or make no sense on paper. */
+    .noise-overlay,
+    #bayer-bg,
+    .cursor-dot,
+    .cursor-ring,
+    .scroll-progress,
+    .back-to-top,
+    .hero-scroll-hint,
+    .startup-overlay,
+    .mobile-menu,
+    #contact-cloud,
+    .clickable-pulse::after,
+    .grid-overlay,
+    .console,
+    .rail,
+    .diary-bg-text,
+    .plate__index {
+        display: none !important;
+    }
+
+    /* No animation, no fixed overlays, no parallax. */
+    * {
+        position: static !important;
+        animation: none !important;
+        transition: none !important;
+        backdrop-filter: none !important;
+        -webkit-backdrop-filter: none !important;
+        -webkit-text-stroke: 0 !important;
+        text-shadow: none !important;
+        box-shadow: none !important;
+    }
+
+    /* The nav is a fixed bar on screen; inline it as a simple header on paper. */
+    .nav-bar {
+        display: block !important;
+        position: static !important;
+        height: auto !important;
+        background: #fff !important;
+        border: 0 !important;
+        padding: 0 0 8pt !important;
+        margin: 0 0 12pt !important;
+        border-bottom: 1px solid #999 !important;
+    }
+    .nav-hamburger { display: none !important; }
+    .nav-links,
+    .nav-status { display: inline !important; }
+    .nav-link { color: #111 !important; }
+    .nav-link::before { content: '[' attr(data-section) '] '; color: #555 !important; }
+    .nav-links { display: block !important; }
+
+    /* Stop marquees and lay their text out inline. */
+    .marquee { overflow: visible !important; white-space: normal !important; border-color: #ccc !important; }
+    .marquee-track { animation: none !important; transform: none !important; display: block !important; white-space: normal !important; }
+    .marquee-item { display: inline !important; color: #111 !important; padding: 0 6pt 0 0 !important; }
+
+    /* Typography falls back to a printer-friendly serif/mono mix. */
+    .hero-name,
+    .section-title,
+    .section-num,
+    .about-statement,
+    .cell-value,
+    .projects-tile__title,
+    .experience-row__role .ttl,
+    .contact-tile__value,
+    .diary-header__title,
+    .plate__title {
+        color: #111 !important;
+        font-family: 'Times New Roman', Georgia, serif !important;
+    }
+    .hero-name .line--stroke { color: #555 !important; }
+
+    /* Hero stat bar prints inline. */
+    .hero-section { height: auto !important; padding-top: 0 !important; }
+    .hero-canvas { justify-content: flex-start !important; }
+    .hero-stats { background: #fff !important; border-color: #ccc !important; }
+    .hero-stat { background: #fff !important; border-color: #ccc !important; }
+    .hero-stat-num { color: #111 !important; }
+    .hero-stat-num .suffix { color: #555 !important; }
+
+    /* Remove the dither-window mask trick (no background canvas to reveal). */
+    .about-section::before,
+    .projects-section::before,
+    .experience-section::before { display: none !important; }
+    .section-dither { display: none !important; }
+
+    /* Hairline grids: keep structure but lighten the lines. */
+    .about-grid, .projects-grid, .experience-list,
+    .contact-grid { border-color: #bbb !important; }
+    .about-cell,
+    .projects-tile,
+    .experience-row,
+    .contact-tile,
+    .experience-row > *,
+    .projects-tag,
+    .experience-tag,
+    .hero-stat { border-color: #ccc !important; }
+
+    .about-cell--highlight,
+    .projects-tag,
+    .experience-row__role .co { color: #6a5318 !important; }
+
+    /* Expand hover-gated project descriptions + tags so the full text prints. */
+    .projects-tile__desc-rest,
+    .projects-tile__tags { max-height: none !important; opacity: 1 !important; overflow: visible !important; }
+    .projects-tile__desc-ellipsis { display: none !important; }
+    .projects-tile__media img,
+    .projects-tile__media video { filter: grayscale(100%) contrast(1.1) brightness(0.85) !important; }
+    .projects-tile__media video { display: none !important; }
+    .projects-tile__scrim { display: none !important; }
+    .projects-tile__foot { position: static !important; }
+
+    .contact-tile,
+    .contact-footer { background: #fff !important; }
+
+    /* Appends the destination URL after actionable links. */
+    .projects-tile::after,
+    .contact-tile::after,
+    .hero-social-link::after,
+    .about-cta::after,
+    .diary-back-link::after {
+        content: ' (' attr(href) ')';
+        font-size: 8pt;
+        color: #555 !important;
+        word-break: break-all;
+    }
+
+    /* Avoid awkward page breaks inside discrete blocks. */
+    .about-cell,
+    .projects-tile,
+    .experience-row,
+    .contact-tile,
+    .plate,
+    .diary-header { break-inside: avoid; page-break-inside: avoid; }
+    .section { break-after: auto; }
+
+    /* Diary reader overlay: if open, print only its content; otherwise normal flow. */
+    .reader { position: static !important; transform: none !important; visibility: visible !important; background: #fff !important; }
+    .reader__inner { max-width: 100% !important; padding: 0 !important; }
+    .diary-body__code pre { white-space: pre-wrap !important; word-break: break-word; }
+}
