@@ -33,6 +33,10 @@
     // classes so parsed Markdown is styled by the existing vocabulary.
     let mdParser = null;
 
+    // Module-scope entry list + currently-open entry (deep linking & reader nav).
+    let allEntries = [];
+    let currentEntry = null;
+
     function getMarkdownParser() {
         if (mdParser) return mdParser;
         if (typeof markdownit !== 'function') return null; // CDN blocked/unavailable
@@ -226,6 +230,7 @@
         const diary = data.diary || {};
         const page = diary.page || {};
         const entries = Array.isArray(diary.entries) ? diary.entries : [];
+        allEntries = entries;
 
         if (page.title) {
             document.title = page.title;
@@ -276,6 +281,8 @@
         const inner = document.getElementById('diaryReaderInner');
         if (!reader || !inner) return;
 
+        currentEntry = entry;
+
         const idxEl = document.getElementById('diaryReaderIdx');
         const titleEl = document.getElementById('diaryReaderTitle');
         const dateEl = document.getElementById('diaryReaderDate');
@@ -291,18 +298,24 @@
             if (scroller) scroller.scrollTop = 0;
             const closeBtn = document.getElementById('diaryReaderClose');
             if (closeBtn) closeBtn.focus();
+            // Persist the deep link without an extra history entry or scroll jump.
+            if (window.history && history.replaceState && entry && entry.index) {
+                history.replaceState(null, '', '#entry-' + entry.index);
+            }
         };
 
         // Cached: open immediately.
         if (entry.body && bodyCache.has(entry.body)) {
             inner.innerHTML = bodyCache.get(entry.body);
             reveal();
+            updateReaderNav(entry);
             return;
         }
 
         // First open: show the reader with a loading state, then fetch.
         inner.innerHTML = '<p class="reader__loading">DECODING TRANSMISSION</p>';
         reveal();
+        updateReaderNav(entry);
 
         loadEntryBody(entry)
             .then(html => { inner.innerHTML = html; })
@@ -322,14 +335,83 @@
         reader.classList.remove('is-open');
         reader.setAttribute('aria-hidden', 'true');
         document.body.style.overflow = '';
+        currentEntry = null;
+        // Drop a deep-link fragment without adding a history entry.
+        if (window.history && history.replaceState && entryFromHash(window.location.hash)) {
+            history.replaceState(null, '', window.location.pathname + window.location.search);
+        }
+    }
+
+    // ---- DEEP LINKING & READER NAV (entry-NN fragments, prev/next) ----
+
+    // Maps a "#entry-NN" fragment to its entry object (tolerant of leading # / whitespace).
+    function entryFromHash(hash) {
+        if (!hash) return null;
+        const match = String(hash).trim().match(/^#?entry-(.+)$/i);
+        if (!match) return null;
+        const idx = match[1];
+        for (let i = 0; i < allEntries.length; i++) {
+            if (allEntries[i] && String(allEntries[i].index) === idx) return allEntries[i];
+        }
+        return null;
+    }
+
+    // Opens the entry matching the fragment, but only if the reader is closed.
+    function openEntryFromHash(hash) {
+        const entry = entryFromHash(hash);
+        if (!entry) return;
+        const reader = document.getElementById('diaryReader');
+        if (reader && reader.classList.contains('is-open')) return;
+        openReader(entry);
+    }
+
+    // Moves to a neighboring entry (-1 prev, +1 next), clamped to the list bounds.
+    function openNeighbor(delta) {
+        if (!allEntries.length || !currentEntry) return;
+        const currentIdx = allEntries.indexOf(currentEntry);
+        if (currentIdx === -1) return;
+        let next = currentIdx + delta;
+        if (next < 0) next = 0;
+        if (next > allEntries.length - 1) next = allEntries.length - 1;
+        if (next === currentIdx) return;
+        openReader(allEntries[next]);
+    }
+
+    // Enables/disables prev/next based on position; no-op if buttons are absent.
+    function updateReaderNav(entry) {
+        const prevBtn = document.getElementById('diaryReaderPrev');
+        const nextBtn = document.getElementById('diaryReaderNext');
+        if (!prevBtn && !nextBtn) return;
+        if (!allEntries.length) return;
+        const idx = entry ? allEntries.indexOf(entry) : -1;
+        const apply = (btn, disabled) => {
+            if (!btn) return;
+            btn.disabled = disabled;
+            if (disabled) btn.setAttribute('aria-disabled', 'true');
+            else btn.removeAttribute('aria-disabled');
+        };
+        apply(prevBtn, idx <= 0);
+        apply(nextBtn, idx === -1 || idx >= allEntries.length - 1);
     }
 
     function initReader() {
         const closeBtn = document.getElementById('diaryReaderClose');
         if (closeBtn) closeBtn.addEventListener('click', closeReader);
 
+        // Prev / next transmission buttons (markup lives in diary.html).
+        const prevBtn = document.getElementById('diaryReaderPrev');
+        const nextBtn = document.getElementById('diaryReaderNext');
+        if (prevBtn) prevBtn.addEventListener('click', () => openNeighbor(-1));
+        if (nextBtn) nextBtn.addEventListener('click', () => openNeighbor(1));
+
         document.addEventListener('keydown', (e) => {
-            if (e.key === 'Escape') closeReader();
+            if (e.key === 'Escape') { closeReader(); return; }
+            if (!currentEntry) return;
+            const t = e.target;
+            const typing = t && (/^(input|textarea|select)$/i.test(t.tagName || '') || t.isContentEditable);
+            if (typing) return;
+            if (e.key === 'ArrowLeft') { e.preventDefault(); openNeighbor(-1); }
+            else if (e.key === 'ArrowRight') { e.preventDefault(); openNeighbor(1); }
         });
 
         const reader = document.getElementById('diaryReader');
@@ -339,6 +421,12 @@
                 if (e.target === reader) closeReader();
             });
         }
+
+        // React to fragment changes (RSS deep links) only while the reader is closed.
+        window.addEventListener('hashchange', () => {
+            if (reader && reader.classList.contains('is-open')) return;
+            openEntryFromHash(window.location.hash);
+        });
     }
 
     // ---- TELEMETRY (live clock, signal, cursor coords) ----
@@ -547,6 +635,7 @@
                 initTelemetry();
                 initScrollSpy(count);
                 initAnimations();
+                openEntryFromHash(window.location.hash);
             })
             .catch(err => {
                 console.error('Dev Diary bootstrap failed:', err);

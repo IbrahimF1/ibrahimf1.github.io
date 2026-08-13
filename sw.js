@@ -50,6 +50,23 @@ if (self.workbox) {
             ]
         })
     );
+
+    // Cross-origin vendor libraries (GSAP, js-yaml, markdown-it on cdnjs /
+    // jsDelivr): stale-while-revalidate so a cached copy serves instantly on
+    // repeat visits and survives a brief CDN outage. Scripts arrive as opaque
+    // responses, which cache and replay correctly for <script> tags.
+    workbox.routing.registerRoute(
+        function (args) {
+            var url = args.url;
+            return (url.origin === 'https://cdnjs.cloudflare.com' ||
+                    url.origin === 'https://cdn.jsdelivr.net') &&
+                   args.request.destination === 'script';
+        },
+        new workbox.strategies.StaleWhileRevalidate({
+            cacheName: 'if-portfolio-vendor',
+            plugins: [new workbox.expiration.ExpirationPlugin({ maxEntries: 20, maxAgeSeconds: 60 * 60 * 24 * 30 })]
+        })
+    );
 } else {
     // CDN unreachable: a minimal pass-through fetch cache so offline still works.
     self.addEventListener('fetch', function (event) {

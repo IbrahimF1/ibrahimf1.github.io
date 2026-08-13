@@ -14,6 +14,8 @@
     <meta name="robots" content="index, follow, max-image-preview:large">
     <meta name="color-scheme" content="dark">
     <meta name="application-name" content="Ibrahim Faruquee — Dev Diary">
+    <meta name="referrer" content="strict-origin-when-cross-origin">
+    <meta name="format-detection" content="telephone=no">
     <link rel="canonical" href="https://ibrahimf1.github.io/diary.html">
     <!-- Identity verification + feed discovery -->
     <link rel="me" href="https://github.com/IbrahimF1">
@@ -312,12 +314,25 @@
                 <span class="reader__title" id="diaryReaderTitle">—</span>
                 <span class="reader__date" id="diaryReaderDate">—</span>
             </div>
+            <div class="reader__nav">
+                <button class="reader__nav-btn reader__nav-btn--prev" id="diaryReaderPrev" type="button" aria-label="Previous transmission" disabled>‹ PREV</button>
+                <button class="reader__nav-btn reader__nav-btn--next" id="diaryReaderNext" type="button" aria-label="Next transmission">NEXT ›</button>
+            </div>
             <button class="reader__close" id="diaryReaderClose" type="button" aria-label="Close transmission">[ ESC ] CLOSE</button>
         </div>
         <div class="reader__scroll">
             <div class="reader__inner" id="diaryReaderInner"></div>
         </div>
     </div>
+
+    <noscript>
+        <div style="position:relative;z-index:2;max-width:680px;margin:0 auto;padding:120px var(--pad,28px) 80px;font-family:'Courier New',monospace;color:#c8c2b8;">
+            <h1 style="font-size:clamp(30px,7vw,56px);color:#f2eee7;letter-spacing:-0.02em;margin-bottom:16px;">Dev Diary</h1>
+            <p style="font-size:15px;line-height:1.8;margin-bottom:24px;">Ibrahim Faruquee&rsquo;s development journal. The interactive transmission console needs JavaScript to render its entries &mdash; enable it to read the field notes, or head back to the portfolio.</p>
+            <p><a style="color:#d4c5ab;font-size:13px;letter-spacing:0.2em;text-transform:uppercase;" href="index.html">&larr; Return to portfolio</a></p>
+            <p style="margin-top:32px;font-size:11px;letter-spacing:0.18em;text-transform:uppercase;color:#6b6560;">Enable JavaScript for the full experience &mdash; or subscribe via the <a style="color:#d4c5ab;" href="rss.xml">RSS feed</a>.</p>
+        </div>
+    </noscript>
 
     <!-- SCRIPTS — deferred for parallel download and non-blocking execution -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/js-yaml/4.1.0/js-yaml.min.js" defer></script>
