@@ -39,18 +39,6 @@ if (self.workbox) {
         new workbox.strategies.StaleWhileRevalidate({ cacheName: 'if-portfolio-assets' })
     );
 
-    // Google Fonts CSS + webfonts: cache-first, 1 year.
-    workbox.routing.registerRoute(
-        /^https:\/\/fonts\.(googleapis|gstatic)\.com\//i,
-        new workbox.strategies.CacheFirst({
-            cacheName: 'if-portfolio-fonts',
-            plugins: [
-                new workbox.cacheableResponse.CacheableResponsePlugin({ statuses: [0, 200] }),
-                new workbox.expiration.ExpirationPlugin({ maxEntries: 30, maxAgeSeconds: 60 * 60 * 24 * 365 })
-            ]
-        })
-    );
-
 } else {
     // CDN unreachable: a minimal pass-through fetch cache so offline still works.
     self.addEventListener('fetch', function (event) {
