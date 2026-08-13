@@ -1,0 +1,27 @@
+# Normalize line endings across platforms: text files are stored and checked
+# out with LF. Ends the cross-platform CRLF/LF churn and keeps diffs clean.
+* text=auto eol=lf
+
+# Explicit text types
+*.html  text eol=lf
+*.css   text eol=lf
+*.js    text eol=lf
+*.mjs   text eol=lf
+*.yaml  text eol=lf
+*.yml   text eol=lf
+*.json  text eol=lf
+*.xml   text eol=lf
+*.svg   text eol=lf
+*.md    text eol=lf
+*.txt   text eol=lf
+*.webmanifest text eol=lf
+
+# Binaries (never normalize)
+*.png   binary
+*.jpg   binary
+*.jpeg  binary
+*.webp  binary
+*.webm  binary
+*.mp4   binary
+*.woff2 binary
+*.ico   binary

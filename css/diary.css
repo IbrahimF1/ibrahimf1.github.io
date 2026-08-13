@@ -483,6 +483,11 @@
     min-width: 0;
 }
 .reader__date { color: var(--accent); flex-shrink: 0; }
+.reader__reading-time {
+    color: var(--fg-dim);
+    flex-shrink: 0;
+    font-variant-numeric: tabular-nums;
+}
 .reader__close {
     background: none;
     border: 1px solid var(--border-bright);

@@ -25,6 +25,19 @@
         return div.innerHTML;
     }
 
+    // Estimates reading time from rendered HTML (~200 WPM, min 1 min).
+    function computeReadingTime(html) {
+        try {
+            const probe = document.createElement('div');
+            probe.innerHTML = html || '';
+            const words = (probe.textContent || '').split(/\s+/).filter(Boolean);
+            if (!words.length) return '1 MIN READ';
+            return Math.max(1, Math.round(words.length / 200)) + ' MIN READ';
+        } catch (e) {
+            return '1 MIN READ';
+        }
+    }
+
     const prefersReducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 
     // ---- MARKDOWN PARSER (markdown-it) ----
@@ -276,6 +289,46 @@
 
     // ---- READER (fullscreen, lazy body load) ----
 
+    // Lazily-created reading-time badge (cached after first use).
+    let readingTimeEl = null;
+
+    // Finds or creates the reading-time span inside .reader__meta. Never throws.
+    function getReadingTimeEl() {
+        try {
+            const existing = document.getElementById('diaryReadingTime');
+            if (existing) { readingTimeEl = existing; return existing; }
+            if (readingTimeEl) return readingTimeEl;
+            const span = document.createElement('span');
+            span.className = 'reader__reading-time';
+            span.id = 'diaryReadingTime';
+            span.style.display = 'none';
+            const dateEl = document.getElementById('diaryReaderDate');
+            if (dateEl && dateEl.parentNode) {
+                dateEl.parentNode.insertBefore(span, dateEl.nextSibling);
+            } else {
+                const meta = document.querySelector('.reader__meta');
+                if (meta) meta.appendChild(span);
+            }
+            readingTimeEl = span;
+            return span;
+        } catch (e) {
+            return null;
+        }
+    }
+
+    function showReadingTime(html) {
+        const rt = getReadingTimeEl();
+        if (!rt) return;
+        rt.textContent = computeReadingTime(html);
+        rt.style.display = '';
+    }
+
+    function hideReadingTime() {
+        const rt = getReadingTimeEl();
+        if (!rt) return;
+        rt.style.display = 'none';
+    }
+
     function openReader(entry) {
         const reader = document.getElementById('diaryReader');
         const inner = document.getElementById('diaryReaderInner');
@@ -307,6 +360,7 @@
         // Cached: open immediately.
         if (entry.body && bodyCache.has(entry.body)) {
             inner.innerHTML = bodyCache.get(entry.body);
+            showReadingTime(inner.innerHTML);
             reveal();
             updateReaderNav(entry);
             return;
@@ -314,14 +368,19 @@
 
         // First open: show the reader with a loading state, then fetch.
         inner.innerHTML = '<p class="reader__loading">DECODING TRANSMISSION</p>';
+        hideReadingTime();
         reveal();
         updateReaderNav(entry);
 
         loadEntryBody(entry)
-            .then(html => { inner.innerHTML = html; })
+            .then(html => {
+                inner.innerHTML = html;
+                showReadingTime(html);
+            })
             .catch(err => {
                 console.error(`Failed to load diary entry body "${entry.body}":`, err);
                 inner.innerHTML = buildBodyError(err, entry);
+                hideReadingTime();
             })
             .finally(() => {
                 const scroller = reader.querySelector('.reader__scroll');
