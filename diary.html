@@ -22,10 +22,8 @@
     <link rel="me" href="https://www.linkedin.com/in/ibrahim-f1">
     <link rel="alternate" type="application/rss+xml" title="Dev Diary — Ibrahim Faruquee" href="https://ibrahimf1.github.io/rss.xml">
     <link rel="author" href="mailto:ifaruquee1@gmail.com">
-    <link rel="preconnect" href="https://cdnjs.cloudflare.com" crossorigin>
-    <link rel="dns-prefetch" href="https://cdnjs.cloudflare.com">
-    <link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin>
-    <link rel="dns-prefetch" href="https://cdn.jsdelivr.net">
+    <!-- Vendor libraries are self-hosted (vendor/) and same-origin, so no CDN
+         resource hints are needed. Google Fonts keeps its own preconnect below. -->
     <link rel="preload" href="diary/diary.yaml" as="fetch" crossorigin>
     <link rel="manifest" href="site.webmanifest">
     <!-- Open Graph -->
@@ -335,11 +333,11 @@
     </noscript>
 
     <!-- SCRIPTS — deferred for parallel download and non-blocking execution -->
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/js-yaml/4.1.0/js-yaml.min.js" defer></script>
+    <script src="vendor/js-yaml.min.js" defer></script>
     <!-- markdown-it — parses each entry's Markdown body file into HTML (global: markdownit) -->
-    <script src="https://cdn.jsdelivr.net/npm/markdown-it@14.1.0/dist/markdown-it.min.js" defer></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/gsap.min.js" defer></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/ScrollTrigger.min.js" defer></script>
+    <script src="vendor/markdown-it.min.js" defer></script>
+    <script src="vendor/gsap.min.js" defer></script>
+    <script src="vendor/ScrollTrigger.min.js" defer></script>
     <script src="js/bayer-background.js" defer></script>
     <script src="js/favicon.js" defer></script>
     <script src="js/diary.js" defer></script>

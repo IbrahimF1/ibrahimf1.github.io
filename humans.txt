@@ -1,0 +1,13 @@
+/* TEAM */
+Ibrahim Faruquee — Software Engineer, Design & Engineering — https://github.com/IbrahimF1
+
+/* SITE */
+Last update: 2026
+Language: English
+Doctype: HTML5
+
+/* THANKS */
+Ibrahim Faruquee
+
+/* TECHNOLOGY */
+Vanilla HTML/CSS/JS, GSAP, three.js, js-yaml, markdown-it, Workbox service worker

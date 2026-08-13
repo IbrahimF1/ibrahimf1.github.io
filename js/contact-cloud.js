@@ -37,7 +37,7 @@
        CONFIGURATION
        ═══════════════════════════════════════════════════════════ */
     var IMG_URL         = 'assets/profile_pic.png';
-    var THREE_CDN       = 'https://cdn.jsdelivr.net/npm/three@0.130.0/build/three.min.js';
+    var THREE_CDN       = 'vendor/three.min.js';
 
     var GRID_ROWS       = window.matchMedia('(max-width: 600px)').matches ? 84 : 160; // sampling resolution (image height); reduced on narrow viewports where the smaller .contact-portrait frame would otherwise map each glyph to <1px (sub-pixel → ASCII vanishes)
     var INSTANCE_SIZE   = 1;                          // grid cell size in world units

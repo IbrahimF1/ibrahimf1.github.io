@@ -1,0 +1,5 @@
+# RFC 9116 security.txt — vulnerability disclosure contact
+Contact: mailto:ifaruquee1@gmail.com
+Expires: 2027-08-13T23:59:00.000Z
+Preferred-Languages: en
+Canonical: https://ibrahimf1.github.io/.well-known/security.txt
