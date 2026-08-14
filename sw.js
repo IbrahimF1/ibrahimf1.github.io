@@ -1,13 +1,13 @@
 /* ============================================================
    SERVICE WORKER — offline cache + instant repeat visits
    ------------------------------------------------------------
-   No-build Workbox: loads the runtime from the gstatic CDN and
-   hand-wires the routes. Same-origin assets are served
+   Self-hosted Workbox runtime (vendor/workbox/) — no third-party
+   importScripts dependency. Same-origin assets are served
    stale-while-revalidate (instant, then quietly updated); the
-   HTML shell is network-first so deploys always land; Google
-   Fonts are cached essentially forever. PWA installable.
+   HTML shell is network-first so deploys always land. PWA
+   installable; works fully offline.
    ============================================================ */
-importScripts('https://storage.googleapis.com/workbox-cdn/releases/7.1.0/workbox-sw.js');
+importScripts('vendor/workbox/workbox-sw.js');
 
 if (self.workbox) {
     workbox.setConfig({ debug: false });
