@@ -571,7 +571,7 @@ function initAnimations(data) {
                 gsap.to(ring, { width: 64, height: 64, borderColor: '#f2eee7', duration: 0.2, ease: 'power2.out' });
             });
             el.addEventListener('mouseleave', () => {
-                gsap.to(ring, { width: 40, height: 40, borderColor: '#6b6560', duration: 0.2, ease: 'power2.out' });
+                gsap.to(ring, { width: 40, height: 40, borderColor: '#827a70', duration: 0.2, ease: 'power2.out' });
             });
         });
     }
@@ -1021,7 +1021,7 @@ function initKeyboardNav(data) {
                     background:#0a0a0a;color:#c8c2b8;font-family:monospace;text-align:center;padding:20px;">
                     <div>
                         <p style="font-size:11px;letter-spacing:0.3em;text-transform:uppercase;margin-bottom:10px;">SYS::ERROR</p>
-                        <p style="color:#6b6560;font-size:13px;">Failed to load data.yaml — ${err.message}</p>
+                        <p style="color:#827a70;font-size:13px;">Failed to load data.yaml — ${err.message}</p>
                     </div>
                 </div>`;
         });

@@ -703,7 +703,7 @@
                         padding:120px 30px 60px;text-align:center;">
                         <div>
                             <p style="font-size:11px;letter-spacing:0.3em;text-transform:uppercase;margin-bottom:10px;color:#b5a898;">SYS::ERROR</p>
-                            <p style="color:#6b6560;font-size:13px;">Failed to load diary/diary.yaml — ${err.message}</p>
+                            <p style="color:#827a70;font-size:13px;">Failed to load diary/diary.yaml — ${err.message}</p>
                             <p style="margin-top:24px;"><a href="index.html" style="color:#b5a898;text-decoration:none;letter-spacing:0.2em;text-transform:uppercase;font-size:11px;">[&larr; RETURN HOME]</a></p>
                         </div>
                     </div>
