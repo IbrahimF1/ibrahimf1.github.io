@@ -646,7 +646,12 @@ function initAnimations(data) {
             const el = document.getElementById(id);
             if (el && el.getBoundingClientRect().top <= center) active = id;
         });
-        navLinks.forEach(l => l.classList.toggle('is-active', l.dataset.target === active));
+        navLinks.forEach(l => {
+            const isActive = l.dataset.target === active;
+            l.classList.toggle('is-active', isActive);
+            if (isActive) l.setAttribute('aria-current', 'true');
+            else l.removeAttribute('aria-current');
+        });
     }
     ScrollTrigger.create({ trigger: 'body', start: 'top top', end: 'bottom bottom', onUpdate: updateActive });
     updateActive();

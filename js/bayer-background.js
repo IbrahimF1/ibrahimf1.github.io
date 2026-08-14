@@ -364,6 +364,9 @@
     gl.viewport(0, 0, canvas.width, canvas.height);
     gl.uniform2f(loc.uResolution, canvas.width, canvas.height);
     gl.uniform1f(loc.uPixelSize, PIXEL_SIZE * dpr);
+    // In reduced-motion mode there is no animation loop to repaint after a
+    // backing-store realloc, so redraw the static frame explicitly.
+    if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) renderStatic();
   }
   // Debounce resize: canvas backing-store realloc + uniform reset only after
   // the user stops dragging the window, not on every intermediate frame.
@@ -528,34 +531,44 @@
                  smoothScrollVelocity > 0.001 || smoothInteractive > 0.001;
     if (active || (now - lastDraw) >= idleInterval) {
       lastDraw = now;
-
-      gl.clear(gl.COLOR_BUFFER_BIT);
-
-      // Time uniforms
-      gl.uniform1f(loc.uTime, elapsed);
-      gl.uniform2f(loc.uMouse, smoothMX, smoothMY);
-
-      // Global profile uniforms (constant across all sections)
-      gl.uniform3f(loc.uColorA, PROFILE.warm[0], PROFILE.warm[1], PROFILE.warm[2]);
-      gl.uniform3f(loc.uColorB, PROFILE.cool[0], PROFILE.cool[1], PROFILE.cool[2]);
-      gl.uniform1f(loc.uDitherOpacity, PROFILE.opacity);
-      gl.uniform1f(loc.uDensity, PROFILE.density);
-      gl.uniform1f(loc.uNoiseScale, PROFILE.scale);
-      gl.uniform1f(loc.uFlowSpeed, PROFILE.speed * baseAnimSpeed);
-      gl.uniform2f(loc.uFlowDir, PROFILE.flowX, PROFILE.flowY);
-
-      // Dynamic response uniforms
-      gl.uniform1f(loc.uScrollVelocity, smoothScrollVelocity);
-      gl.uniform1f(loc.uInteractive, smoothInteractive);
-
-      gl.drawArrays(gl.TRIANGLES, 0, 3);
+      paint(elapsed);
     }
     rafId = requestAnimationFrame(frame);
   }
+  // Single full draw from the current smoothed state — shared by the animated
+  // frame loop and the reduced-motion static frame.
+  function paint(elapsed) {
+    gl.clear(gl.COLOR_BUFFER_BIT);
+    gl.uniform1f(loc.uTime, elapsed);
+    gl.uniform2f(loc.uMouse, smoothMX, smoothMY);
+    gl.uniform3f(loc.uColorA, PROFILE.warm[0], PROFILE.warm[1], PROFILE.warm[2]);
+    gl.uniform3f(loc.uColorB, PROFILE.cool[0], PROFILE.cool[1], PROFILE.cool[2]);
+    gl.uniform1f(loc.uDitherOpacity, PROFILE.opacity);
+    gl.uniform1f(loc.uDensity, PROFILE.density);
+    gl.uniform1f(loc.uNoiseScale, PROFILE.scale);
+    gl.uniform1f(loc.uFlowSpeed, PROFILE.speed * baseAnimSpeed);
+    gl.uniform2f(loc.uFlowDir, PROFILE.flowX, PROFILE.flowY);
+    gl.uniform1f(loc.uScrollVelocity, smoothScrollVelocity);
+    gl.uniform1f(loc.uInteractive, smoothInteractive);
+    gl.drawArrays(gl.TRIANGLES, 0, 3);
+  }
+
+  function renderStatic() {
+    updateDynamicInputs(0.016);
+    paint((performance.now() - t0) * 0.001);
+  }
+
   function start() { if (rafId == null) { lastFrameTime = performance.now(); rafId = requestAnimationFrame(frame); } }
   function stop() { if (rafId != null) { cancelAnimationFrame(rafId); rafId = null; } }
-  document.addEventListener('visibilitychange', function () { if (document.hidden) stop(); else start(); });
-  start();
+
+  // Reduced-motion: render a single static frame (no continuous loop) so the
+  // background fully respects the motion preference and uses no idle GPU.
+  if (reducedMotion.matches) {
+    renderStatic();
+  } else {
+    document.addEventListener('visibilitychange', function () { if (document.hidden) stop(); else start(); });
+    start();
+  }
 
   console.log('[bayer-bg] ✓ WebGL2 Bayer diamond dithering initialized');
 })();
