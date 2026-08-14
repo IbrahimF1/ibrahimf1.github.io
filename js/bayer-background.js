@@ -40,6 +40,12 @@
   var VELOCITY_LERP   = 0.03;   // smoothing for scroll velocity
   var VELOCITY_DECAY  = 0.92;   // velocity decay per frame
 
+  /* Adaptive render throttle: the dither pattern is slow, so while the page is
+     idle we cap the WebGL redraw rate to save GPU/battery. Any scroll, pointer,
+     or interactive-element activity immediately restores full rAF speed. */
+  var IDLE_FPS         = 30;    // redraw cap while idle
+  var ACTIVE_WINDOW_MS = 1200;  // full-speed window after any interaction
+
   /* ── Global dither profile ───────────────────────────────
      A single, scroll-invariant set of visual parameters applied
      to every section. Colors are [r, g, b] in 0–1 range.
@@ -374,12 +380,19 @@
   var rawMX = 0.5, rawMY = 0.5;
   var smoothMX = 0.5, smoothMY = 0.5;
 
+  // Tracks the last time the user interacted (pointer/scroll/hover) so the
+  // render loop can throttle to IDLE_FPS when the page is quiet.
+  var lastInteractionAt = performance.now();
+  function markActive() { lastInteractionAt = performance.now(); }
+
   window.addEventListener('mousemove', function (e) {
+    markActive();
     rawMX = e.clientX / window.innerWidth;
     rawMY = 1.0 - e.clientY / window.innerHeight;
   });
 
   window.addEventListener('touchmove', function (e) {
+    markActive();
     if (e.touches.length > 0) {
       rawMX = e.touches[0].clientX / window.innerWidth;
       rawMY = 1.0 - e.touches[0].clientY / window.innerHeight;
@@ -460,6 +473,7 @@
      */
     setInteractive: function (state) {
       extInteractive = Math.max(0, Math.min(1, state));
+      if (state > 0) markActive();
     },
 
     /**
@@ -487,6 +501,8 @@
 
   var t0 = performance.now();
   var lastFrameTime = t0;
+  var lastDraw = t0;
+  var idleInterval = 1000 / IDLE_FPS;
 
   // Pause the render loop while the tab is hidden — browsers throttle rAF to
   // ~1Hz in background anyway, so this avoids burning GPU/battery on a canvas
@@ -506,26 +522,34 @@
     // Smooth dynamic inputs (scroll velocity & interactive glow)
     updateDynamicInputs(dt);
 
-    gl.clear(gl.COLOR_BUFFER_BIT);
+    // Adaptive throttle: render every frame while recently active (scroll,
+    // pointer, hover), else cap to IDLE_FPS to spare the GPU on a slow pattern.
+    var active = (now - lastInteractionAt) < ACTIVE_WINDOW_MS ||
+                 smoothScrollVelocity > 0.001 || smoothInteractive > 0.001;
+    if (active || (now - lastDraw) >= idleInterval) {
+      lastDraw = now;
 
-    // Time uniforms
-    gl.uniform1f(loc.uTime, elapsed);
-    gl.uniform2f(loc.uMouse, smoothMX, smoothMY);
+      gl.clear(gl.COLOR_BUFFER_BIT);
 
-    // Global profile uniforms (constant across all sections)
-    gl.uniform3f(loc.uColorA, PROFILE.warm[0], PROFILE.warm[1], PROFILE.warm[2]);
-    gl.uniform3f(loc.uColorB, PROFILE.cool[0], PROFILE.cool[1], PROFILE.cool[2]);
-    gl.uniform1f(loc.uDitherOpacity, PROFILE.opacity);
-    gl.uniform1f(loc.uDensity, PROFILE.density);
-    gl.uniform1f(loc.uNoiseScale, PROFILE.scale);
-    gl.uniform1f(loc.uFlowSpeed, PROFILE.speed * baseAnimSpeed);
-    gl.uniform2f(loc.uFlowDir, PROFILE.flowX, PROFILE.flowY);
+      // Time uniforms
+      gl.uniform1f(loc.uTime, elapsed);
+      gl.uniform2f(loc.uMouse, smoothMX, smoothMY);
 
-    // Dynamic response uniforms
-    gl.uniform1f(loc.uScrollVelocity, smoothScrollVelocity);
-    gl.uniform1f(loc.uInteractive, smoothInteractive);
+      // Global profile uniforms (constant across all sections)
+      gl.uniform3f(loc.uColorA, PROFILE.warm[0], PROFILE.warm[1], PROFILE.warm[2]);
+      gl.uniform3f(loc.uColorB, PROFILE.cool[0], PROFILE.cool[1], PROFILE.cool[2]);
+      gl.uniform1f(loc.uDitherOpacity, PROFILE.opacity);
+      gl.uniform1f(loc.uDensity, PROFILE.density);
+      gl.uniform1f(loc.uNoiseScale, PROFILE.scale);
+      gl.uniform1f(loc.uFlowSpeed, PROFILE.speed * baseAnimSpeed);
+      gl.uniform2f(loc.uFlowDir, PROFILE.flowX, PROFILE.flowY);
 
-    gl.drawArrays(gl.TRIANGLES, 0, 3);
+      // Dynamic response uniforms
+      gl.uniform1f(loc.uScrollVelocity, smoothScrollVelocity);
+      gl.uniform1f(loc.uInteractive, smoothInteractive);
+
+      gl.drawArrays(gl.TRIANGLES, 0, 3);
+    }
     rafId = requestAnimationFrame(frame);
   }
   function start() { if (rafId == null) { lastFrameTime = performance.now(); rafId = requestAnimationFrame(frame); } }
