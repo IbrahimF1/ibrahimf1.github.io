@@ -268,6 +268,7 @@
     <nav class="nav-bar">
         <a href="index.html" class="nav-back">[← HOME]</a>
         <div class="nav-brand">DEV_DIARY://LOG</div>
+        <button class="nav-cmdk" id="navCmdK" type="button" aria-label="Open command palette" title="Command palette (Cmd/Ctrl+K)">⌘K</button>
         <div class="nav-count" id="navCount">[---]</div>
     </nav>
 
@@ -341,6 +342,8 @@
     <script src="js/bayer-background.js" defer></script>
     <script src="js/favicon.js" defer></script>
     <script src="js/diary.js" defer></script>
+    <!-- Command palette (Cmd/Ctrl+K) keyboard navigation -->
+    <script src="js/command-palette.js" defer></script>
     <script>
         if ('serviceWorker' in navigator) {
             window.addEventListener('load', function () {

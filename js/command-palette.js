@@ -50,18 +50,51 @@
     }
 
     function commands() {
+        return document.getElementById('diary') ? diaryCommands() : portfolioCommands();
+    }
+
+    function portfolioCommands() {
         return [
-            { label: 'Home',           hint: 'Section 00',          run: function () { smoothScrollTo('hero'); } },
-            { label: 'About',          hint: 'Section 01',          run: function () { smoothScrollTo('about'); } },
-            { label: 'Projects',       hint: 'Section 02',          run: function () { smoothScrollTo('projects'); } },
-            { label: 'Experience',     hint: 'Section 03',          run: function () { smoothScrollTo('experience'); } },
-            { label: 'Contact',        hint: 'Section 04',          run: function () { smoothScrollTo('contact'); } },
-            { label: 'Back to top',    hint: 'Scroll',              run: function () { smoothScrollTo('hero'); } },
-            { label: 'Open Dev Diary', hint: 'Page',                run: function () { window.location.href = 'diary.html'; } },
+            { label: 'Home',           hint: 'Section 00',           run: function () { smoothScrollTo('hero'); } },
+            { label: 'About',          hint: 'Section 01',           run: function () { smoothScrollTo('about'); } },
+            { label: 'Projects',       hint: 'Section 02',           run: function () { smoothScrollTo('projects'); } },
+            { label: 'Experience',     hint: 'Section 03',           run: function () { smoothScrollTo('experience'); } },
+            { label: 'Contact',        hint: 'Section 04',           run: function () { smoothScrollTo('contact'); } },
+            { label: 'Back to top',    hint: 'Scroll',               run: function () { smoothScrollTo('hero'); } },
+            { label: 'Open Dev Diary', hint: 'Page',                 run: function () { window.location.href = 'diary.html'; } },
             { label: 'Copy email',     hint: 'ifaruquee1@gmail.com', run: copyEmail },
-            { label: 'GitHub',         hint: 'External',            run: function () { openExternal('https://github.com/IbrahimF1'); } },
-            { label: 'LinkedIn',       hint: 'External',            run: function () { openExternal('https://www.linkedin.com/in/ibrahim-f1'); } }
+            { label: 'GitHub',         hint: 'External',             run: function () { openExternal('https://github.com/IbrahimF1'); } },
+            { label: 'LinkedIn',       hint: 'External',             run: function () { openExternal('https://www.linkedin.com/in/ibrahim-f1'); } }
         ];
+    }
+
+    // Diary commands are built from the rendered plates at open time, so they
+    // reflect the current entries. "Open" routes through the #entry-NN deep link
+    // the reader already understands (diary.js).
+    function diaryCommands() {
+        var list = [
+            { label: 'Back to portfolio', hint: 'Page',   run: function () { window.location.href = 'index.html'; } },
+            { label: 'Back to top',       hint: 'Scroll', run: function () { window.scrollTo({ top: 0, behavior: reduceMotion ? 'auto' : 'smooth' }); } }
+        ];
+        var plates = document.querySelectorAll('.plate');
+        for (var i = 0; i < plates.length; i++) {
+            (function (plate) {
+                var titleEl = plate.querySelector('.plate__title');
+                var title = (titleEl && titleEl.textContent ? titleEl.textContent.trim() : ('Entry ' + (plate.dataset.index || '')));
+                var idx = plate.dataset.index || String(i + 1);
+                list.push({
+                    label: 'Go to: ' + title, hint: 'Transmission ' + idx,
+                    run: function () { plate.scrollIntoView({ behavior: reduceMotion ? 'auto' : 'smooth', block: 'start' }); }
+                });
+                list.push({
+                    label: 'Open: ' + title, hint: 'Reader ' + idx,
+                    run: function () { window.location.hash = 'entry-' + idx; }
+                });
+            })(plates[i]);
+        }
+        list.push({ label: 'GitHub',   hint: 'External', run: function () { openExternal('https://github.com/IbrahimF1'); } });
+        list.push({ label: 'LinkedIn', hint: 'External', run: function () { openExternal('https://www.linkedin.com/in/ibrahim-f1'); } });
+        return list;
     }
 
     function escapeHtml(s) {
