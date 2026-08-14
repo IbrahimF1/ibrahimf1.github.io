@@ -1,0 +1,235 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+    <meta name="theme-color" content="#0a0a0a">
+    <meta name="color-scheme" content="dark">
+    <title>3D MARKERS FROM A FLAT SCREENSHOT — Dev Diary — Ibrahim Faruquee</title>
+    <meta name="description" content="Gemini finds evidence in 2D. Dropping those detections back into world space without raycasting the whole scene to death is the entire job.">
+    <link rel="canonical" href="https://ibrahimf1.github.io/diary/entries/02-scenesplat-3d-markers.html">
+    <meta name="robots" content="index, follow, max-image-preview:large">
+    <meta name="author" content="Ibrahim Faruquee">
+    <meta name="referrer" content="strict-origin-when-cross-origin">
+    <link rel="icon" type="image/svg+xml" href="../../assets/favicon.svg">
+    <link rel="alternate" type="application/rss+xml" title="Dev Diary — Ibrahim Faruquee" href="https://ibrahimf1.github.io/rss.xml">
+    <!-- Open Graph -->
+    <meta property="og:type" content="article">
+    <meta property="og:title" content="3D MARKERS FROM A FLAT SCREENSHOT — Dev Diary — Ibrahim Faruquee">
+    <meta property="og:description" content="Gemini finds evidence in 2D. Dropping those detections back into world space without raycasting the whole scene to death is the entire job.">
+    <meta property="og:image" content="https://ibrahimf1.github.io/assets/projects/project2-poster.jpg">
+    <meta property="og:url" content="https://ibrahimf1.github.io/diary/entries/02-scenesplat-3d-markers.html">
+    <meta property="og:site_name" content="Ibrahim Faruquee">
+    <meta property="og:locale" content="en_US">
+    <!-- Twitter -->
+    <meta name="twitter:card" content="summary_large_image">
+    <meta name="twitter:title" content="3D MARKERS FROM A FLAT SCREENSHOT — Dev Diary — Ibrahim Faruquee">
+    <meta name="twitter:description" content="Gemini finds evidence in 2D. Dropping those detections back into world space without raycasting the whole scene to death is the entire job.">
+    <meta name="twitter:image" content="https://ibrahimf1.github.io/assets/projects/project2-poster.jpg">
+    <!-- Structured data (JSON-LD): BlogPosting -->
+    <script type="application/ld+json">{"@context":"https://schema.org","@type":"BlogPosting","headline":"3D MARKERS FROM A FLAT SCREENSHOT","datePublished":"2026-05-28","dateModified":"2026-05-28","author":{"@type":"Person","name":"Ibrahim Faruquee","url":"https://ibrahimf1.github.io/#person"},"mainEntityOfPage":"https://ibrahimf1.github.io/diary/entries/02-scenesplat-3d-markers.html","image":"https://ibrahimf1.github.io/assets/projects/project2-poster.jpg","inLanguage":"en-US"}</script>
+    <link rel="stylesheet" href="../../css/diary.css">
+    <style>
+/* Static entry shell — tokens mirror the diary.html critical CSS.
+   diary.css provides the .diary-body__* typography; these overrides
+   exist because its @font-face/tokens live in page-relative URLs that
+   break from diary/entries/ depth. */
+@font-face {
+    font-family: 'Datatype';
+    src: url('../../fonts/Datatype.wdth.wght.woff2') format('woff2');
+    font-weight: 100 900;
+    font-stretch: 75% 125%;
+    font-display: swap;
+}
+@font-face { font-family: 'Space Mono'; font-style: normal; font-weight: 400; font-display: swap; src: url('../../fonts/spacemono-normal-400-latin.woff2') format('woff2'); }
+@font-face { font-family: 'Space Mono'; font-style: normal; font-weight: 700; font-display: swap; src: url('../../fonts/spacemono-normal-700-latin.woff2') format('woff2'); }
+@font-face { font-family: 'Space Mono'; font-style: italic; font-weight: 400; font-display: swap; src: url('../../fonts/spacemono-italic-400-latin.woff2') format('woff2'); }
+
+:root {
+    --bg: #0a0a0a;
+    --bg-elevated: #111110;
+    --fg: #c8c2b8;
+    --fg-dim: #827a70;
+    --fg-bright: #e8e4df;
+    --accent: #8a7f72;
+    --accent-bright: #b5a898;
+    --border: #2a2825;
+    --border-bright: #3a3632;
+    --highlight: #d4c5ab;
+    --error: #8a6f5f;
+    --font-mono: 'Space Mono', 'Courier New', monospace;
+    --font-display: 'Datatype', 'Space Mono', monospace;
+    --transition-raw: 0.1s steps(2)
+}
+
+*,
+*::before,
+*::after { margin: 0; padding: 0; box-sizing: border-box; }
+
+html { scrollbar-width: thin; scrollbar-color: var(--fg-dim) var(--bg); }
+
+body {
+    background: var(--bg);
+    color: var(--fg);
+    font-family: var(--font-mono);
+    font-size: 14px;
+    line-height: 1.6;
+    -webkit-font-smoothing: antialiased;
+}
+
+a { cursor: pointer; }
+
+.ep-header {
+    position: sticky;
+    top: 0;
+    z-index: 10;
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    gap: 16px;
+    flex-wrap: wrap;
+    padding: 16px 24px;
+    border-bottom: 1px solid var(--border);
+    background: rgba(10, 10, 10, 0.92);
+    -webkit-backdrop-filter: blur(10px);
+    backdrop-filter: blur(10px);
+    font-size: 11px;
+    letter-spacing: 0.2em;
+    text-transform: uppercase;
+}
+.ep-brand {
+    font-family: var(--font-display);
+    font-weight: 700;
+    font-stretch: 100%;
+    letter-spacing: 0.02em;
+    color: var(--fg-bright);
+    text-decoration: none;
+}
+.ep-brand span { color: var(--highlight); font-weight: 400; }
+.ep-back { color: var(--accent-bright); text-decoration: none; font-variant-numeric: tabular-nums; }
+.ep-back:hover, .ep-interactive:hover, .ep-nav-btn:hover { color: var(--highlight); }
+
+.ep-main {
+    max-width: 760px;
+    margin: 0 auto;
+    padding: 56px 24px 72px;
+}
+
+.ep-eyebrow {
+    font-size: 11px;
+    letter-spacing: 0.35em;
+    text-transform: uppercase;
+    color: var(--accent);
+    margin-bottom: 16px;
+}
+.ep-title {
+    font-family: var(--font-display);
+    font-size: clamp(30px, 6vw, 54px);
+    font-weight: 800;
+    font-stretch: 82%;
+    line-height: 0.95;
+    letter-spacing: -0.02em;
+    text-transform: uppercase;
+    color: var(--fg-bright);
+    margin-bottom: 18px;
+}
+.ep-meta {
+    display: flex;
+    gap: 14px;
+    font-size: 11px;
+    letter-spacing: 0.25em;
+    text-transform: uppercase;
+    color: var(--fg-dim);
+    font-variant-numeric: tabular-nums;
+    margin-bottom: 40px;
+}
+.ep-image { margin: 0 0 40px; border: 1px solid var(--border); }
+.ep-image img { display: block; width: 100%; height: auto; filter: grayscale(35%) contrast(1.1) brightness(0.9); }
+
+.ep-footer {
+    border-top: 1px solid var(--border);
+    margin-top: 64px;
+    padding-top: 28px;
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+}
+.ep-nav { display: flex; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
+.ep-nav-btn {
+    font-family: var(--font-mono);
+    font-size: 11px;
+    letter-spacing: 0.2em;
+    text-transform: uppercase;
+    text-decoration: none;
+    color: var(--highlight);
+    border: 1px solid var(--border-bright);
+    padding: 10px 14px;
+    transition: color var(--transition-raw), border-color var(--transition-raw);
+}
+.ep-nav-btn:hover { border-color: var(--highlight); }
+.ep-nav-btn--off { color: var(--fg-dim); opacity: 0.45; }
+.ep-interactive {
+    align-self: flex-start;
+    font-size: 11px;
+    letter-spacing: 0.3em;
+    text-transform: uppercase;
+    color: var(--highlight);
+    text-decoration: none;
+}
+.ep-copy { font-size: 10px; letter-spacing: 0.2em; text-transform: uppercase; color: var(--fg-dim); }
+
+@media (max-width: 600px) {
+    .ep-header { padding: 14px 16px; }
+    .ep-main { padding: 40px 16px 56px; }
+}
+</style>
+</head>
+
+<body>
+    <!-- Static, JS-free article shell; the interactive version lives at ../../diary.html#entry-02 -->
+    <header class="ep-header">
+        <a class="ep-brand" href="../../index.html">IBRAHIM<span>F</span></a>
+        <a class="ep-back" href="../../diary.html">[&larr; DEV_DIARY://LOG]</a>
+    </header>
+
+    <main class="ep-main">
+        <p class="ep-eyebrow">DEV DIARY // TRANSMISSION 02</p>
+        <h1 class="ep-title">3D MARKERS FROM A FLAT SCREENSHOT</h1>
+        <p class="ep-meta">
+            <span>2026.05.28</span>
+            <span>1 MIN READ</span>
+        </p>
+        <figure class="ep-image">
+            <picture><img src="../../assets/projects/project2-poster.jpg" alt="SceneSplat 3D viewport with labeled evidence markers placed in world space" loading="lazy" decoding="async"></picture>
+        </figure>
+        <div class="ep-body">
+        <p class="diary-body__paragraph">Gemini is good at telling you &quot;there's a knife, top-left of frame.&quot; It is profoundly unhelpful at telling you <em>where that knife lives in world space</em>. SceneSplat's vision pipeline takes a flat screenshot of the React Three Fiber viewport and has to drop a labeled marker at a precise 3D coordinate. The naive version — fire a ray from each detected box center into the scene — melts the frame budget on a dense <code>.glb</code> and misses constantly behind geometry.</p>
+        <h3 class="diary-body__heading">THE SHORTCUTS THAT MATTERED</h3>
+        <ul class="diary-body__list">
+        <li>Read the depth buffer at the detection's screen-space centroid instead of raycasting the whole BVH. One texel lookup, not a tree traversal.</li>
+        <li>Pre-compute and cache each scene's bounding box on load; markers snap inside it and never drift into the void.</li>
+        <li>Convert screen→world in the <em>same camera space</em> the screenshot was captured in, so zoom and orbit are already accounted for.</li>
+        <li>Persist markers per session — Gemini doesn't need to re-see what it already found.</li>
+        </ul>
+        <div class="diary-body__code"><span class="diary-body__code-label">js</span><pre>// one depth read beats a full raycast
+        const ndc = screenToNDC(box.center);
+        const depth = readDepthBuffer(ndc);
+        const world = screenToWorld(ndc, depth);
+        marker.position.copy(world);
+        </pre></div><p class="diary-body__paragraph">Net result: markers land where a human would place them, at a fraction of the cost. The lesson I keep relearning — if a per-frame cost is uniform, it's almost always a lookup table in disguise. A depth buffer is just the 3D version.</p>
+
+        </div>
+
+        <footer class="ep-footer">
+            <div class="ep-nav">
+                <a class="ep-nav-btn" href="01-faceybuk-role-split.html">&lsaquo; PREV: WHY ONE INTERFACE FELT WRONG</a>
+                <a class="ep-nav-btn" href="03-heat-aware-thresholds.html">NEXT: WHEN TO TRUST A SINGLE THRESHOLD &rsaquo;</a>
+            </div>
+            <a class="ep-interactive" href="../../diary.html#entry-02">OPEN INTERACTIVE VERSION &#8599;</a>
+            <p class="ep-copy">© 2026 — IBRAHIM FARUQUEE</p>
+        </footer>
+    </main>
+</body>
+
+</html>

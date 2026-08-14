@@ -42,7 +42,7 @@ diary:
         - "UX"
         - "WEBRTC"
         - "ROLE"
-      body: "diary/entries/01-why-the-cursor-felt-dead.md"
+      body: "diary/entries/01-faceybuk-role-split.md"
 
     - index: "02"
       date: "2026.05.28"
@@ -56,12 +56,13 @@ diary:
         - "THREE.JS"
         - "PERF"
         - "AI"
-      body: "diary/entries/02-ditherpunk-background-at-60fps.md"
+      body: "diary/entries/02-scenesplat-3d-markers.md"
 
     - index: "03"
       date: "2026.05.03"
       title: "WHEN TO TRUST A SINGLE THRESHOLD"
       image: "assets/projects/project3.jpeg"
+      image_webp: "assets/projects/project3.webp"
       image_alt: "Raspberry Pi wired to a digital temperature sensor on a breadboard"
       summary: >-
         Heat Aware's simplest version — one number, one phone call — is the
@@ -71,4 +72,4 @@ diary:
         - "IOT"
         - "ARCHITECTURE"
         - "OPINION"
-      body: "diary/entries/03-yaml-as-a-cms.md"
+      body: "diary/entries/03-heat-aware-thresholds.md"

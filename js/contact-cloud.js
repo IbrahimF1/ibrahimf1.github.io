@@ -1,7 +1,8 @@
 /**
  * Contact Section — 3D ASCII Point-Cloud Portrait
  *
- * Renders assets/profile_pic.png (transparent) as a cloud of camera-facing
+ * Renders the profile picture (assets/profile_pic.webp, falling back to
+ * assets/profile_pic.png) as a cloud of camera-facing
  * ASCII glyphs at the resolve plane. When the contact section becomes fully
  * framed in the viewport, a one-shot "Bayer ink reveal" animation grows each
  * glyph in Bayer-threshold order — ink saturating a dithered print — until
@@ -36,7 +37,8 @@
     /* ═══════════════════════════════════════════════════════════
        CONFIGURATION
        ═══════════════════════════════════════════════════════════ */
-    var IMG_URL         = 'assets/profile_pic.png';
+    var IMG_URL         = 'assets/profile_pic.webp';
+    var IMG_FALLBACK_URL = 'assets/profile_pic.png';  // retried when the WebP is missing/undecodable
     var THREE_CDN       = 'vendor/three.min.js';
 
     var GRID_ROWS       = window.matchMedia('(max-width: 600px)').matches ? 84 : 160; // sampling resolution (image height); reduced on narrow viewports where the smaller .contact-portrait frame would otherwise map each glyph to <1px (sub-pixel → ASCII vanishes)
@@ -332,9 +334,17 @@
             material = createMaterial(tex);
             uni = material.uniforms;
 
+            // Prefer the smaller WebP; on failure retry the original PNG
+            // before surfacing an error, so older/broken WebP support only
+            // costs bytes, not the portrait.
+            var triedFallback = false;
             var img = new Image();
             img.onload = function () { buildMesh(img); };
-            img.onerror = function () { console.warn('[contact-cloud] profile image failed to load'); };
+            img.onerror = function () {
+                if (triedFallback) { console.warn('[contact-cloud] profile image failed to load'); return; }
+                triedFallback = true;
+                img.src = IMG_FALLBACK_URL;
+            };
             img.src = IMG_URL;
         });
 

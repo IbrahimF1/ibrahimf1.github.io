@@ -9,11 +9,13 @@ A ditherpunk / brutalist "foundry specimen" portfolio: edge-to-edge hairline gri
 ## Highlights
 
 - **Data-driven** — every section (nav, hero, about, projects, experience, contact) is generated at runtime from [`data.yaml`](data.yaml); the dev diary reads [`diary/diary.yaml`](diary/diary.yaml).
+- **SEO pre-rendered** — [`tools/prerender.mjs`](tools/prerender.mjs) (zero-dep Node) fills static content into both page shells between markers, emits per-entry article pages (`diary/entries/*.html` with `BlogPosting` JSON-LD + OG), and regenerates `rss.xml` (full-content `content:encoded`) + `sitemap.xml`; rerun it after editing content files.
 - **Bayer-dithered WebGL2 background** (`js/bayer-background.js`) — domain-warped fBm with diamond-pixel ordered dithering, scroll/mouse-reactive, pauses when the tab is hidden, respects `prefers-reduced-motion`.
 - **ASCII point-cloud portrait** (`js/contact-cloud.js`) — `assets/profile_pic.png` resampled into camera-facing ASCII glyphs with a one-shot "Bayer ink reveal"; three.js is lazy-loaded only when the contact section is approached.
 - **Animated ditherpunk favicon** (`js/favicon.js`) — a 1-bit pixel-art favicon generated from the name, with a low-FPS Bayer-crawl + glitch animation loop.
-- **Performance-first** — inlined critical CSS, deferred scripts, preconnects to CDNs, lazy-loaded images/videos, WebP `<picture>` sources, a Workbox service worker for offline + instant repeat visits, and compositor-only scroll progress.
-- **Accessible** — visible keyboard focus rings, a skip-to-content link, focus-trapped mobile menu, `prefers-reduced-motion` paths everywhere, ARIA labels, and keyboard section navigation.
+- **Performance-first** — inlined critical CSS, deferred scripts, preconnects to CDNs, lazy-loaded images/videos, WebP `<picture>` sources, a fully self-hosted Workbox service worker (offline page, SWR for assets *and* data payloads) for offline + instant repeat visits, compositor-only cursor/counters, and lazily-streamed markdown-it on the diary.
+- **Engagement** — a "latest transmissions" diary teaser on the home page, share links + copy-link + swipe navigation + reading times in the diary reader, and a command palette (⌘K) reachable from desktop and the mobile menu.
+- **Accessible** — visible keyboard focus rings (with `:focus-visible` parity for hover-revealed content), a skip-to-content link, focus-trapped mobile menu and diary reader, `prefers-reduced-motion` paths everywhere, ARIA labels, and keyboard section navigation.
 
 ## Structure
 
@@ -27,6 +29,7 @@ diary/diary.yaml    # Dev diary data + entry references
 css/style.css       # Portfolio styles
 css/diary.css       # Diary-specific styles
 js/                 # bayer-background, contact-cloud, favicon, main, attention-pulse, diary
+tools/prerender.mjs # Node prerender: fills index/diary markers, emits entry pages + rss.xml + sitemap.xml
 assets/             # favicon, profile pic, project media, OG image
 ```
 

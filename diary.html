@@ -277,13 +277,71 @@
         <div class="section-label">05_DIARY</div>
         <div class="diary-bg-text" id="diaryBgText">DIARY</div>
 
-        <header class="diary-header" id="diaryHeader">
-            <!-- Intro populated from diary/diary.yaml by JS -->
-        </header>
+        <header class="diary-header" id="diaryHeader"><!-- prerender:diaryHeader -->
+            <div class="diary-header__kicker">FIELD NOTES // DEV JOURNAL</div>
+            <h1 class="diary-header__title">DEV_DIARY<span class="stroke">://LOG</span></h1>
+            <p class="diary-header__intro">Field notes from the build. Failures, fixes, and the occasional 3am breakthrough — logged raw, no revisionism.</p>
+        <!-- /prerender:diaryHeader --></header>
 
-        <div class="diary-stack" id="diaryStack">
-            <!-- Entries populated from diary/diary.yaml by JS -->
-        </div>
+        <div class="diary-stack" id="diaryStack"><!-- prerender:diaryStack -->
+            <article class="plate" data-index="01">
+                <div class="plate__index">01</div>
+                <div class="plate__date">2026.06.12</div>
+                <div class="plate__text">
+                    <div class="plate__label">TRANSMISSION 01</div>
+                    <h2 class="plate__title">WHY ONE INTERFACE FELT WRONG</h2>
+                    <p class="plate__summary">FaceyBuk&#39;s shared parent/child UI technically worked — until splitting it by role turned a video call into a shared room. Same story, two intents.</p>
+                    <div class="plate__tags"><b>&#9612;TAGS</b>&nbsp;&nbsp;UX&nbsp;/&nbsp;WEBRTC&nbsp;/&nbsp;ROLE</div>
+                    <span class="plate__reading-time">1 MIN READ</span>
+                    <a class="plate__open" href="diary/entries/01-faceybuk-role-split.html">[ OPEN_TRANSMISSION 01 &rarr; ]</a>
+                </div>
+                <div class="plate__media">
+                    <picture><source srcset="assets/projects/project1.webp" type="image/webp"><img src="assets/projects/project1.png" alt="Side-by-side parent control view and child story view from FaceyBuk" loading="lazy" decoding="async"></picture>
+                    <span class="plate__tick plate__tick--tl"></span>
+                    <span class="plate__tick plate__tick--tr"></span>
+                    <span class="plate__tick plate__tick--bl"></span>
+                    <span class="plate__tick plate__tick--br"></span>
+                </div>
+            </article>
+            <article class="plate plate--alt" data-index="02">
+                <div class="plate__index">02</div>
+                <div class="plate__date">2026.05.28</div>
+                <div class="plate__text">
+                    <div class="plate__label">TRANSMISSION 02</div>
+                    <h2 class="plate__title">3D MARKERS FROM A FLAT SCREENSHOT</h2>
+                    <p class="plate__summary">Gemini finds evidence in 2D. Dropping those detections back into world space without raycasting the whole scene to death is the entire job.</p>
+                    <div class="plate__tags"><b>&#9612;TAGS</b>&nbsp;&nbsp;THREE.JS&nbsp;/&nbsp;PERF&nbsp;/&nbsp;AI</div>
+                    <span class="plate__reading-time">1 MIN READ</span>
+                    <a class="plate__open" href="diary/entries/02-scenesplat-3d-markers.html">[ OPEN_TRANSMISSION 02 &rarr; ]</a>
+                </div>
+                <div class="plate__media">
+                    <picture><img src="assets/projects/project2-poster.jpg" alt="SceneSplat 3D viewport with labeled evidence markers placed in world space" loading="lazy" decoding="async"></picture>
+                    <span class="plate__tick plate__tick--tl"></span>
+                    <span class="plate__tick plate__tick--tr"></span>
+                    <span class="plate__tick plate__tick--bl"></span>
+                    <span class="plate__tick plate__tick--br"></span>
+                </div>
+            </article>
+            <article class="plate" data-index="03">
+                <div class="plate__index">03</div>
+                <div class="plate__date">2026.05.03</div>
+                <div class="plate__text">
+                    <div class="plate__label">TRANSMISSION 03</div>
+                    <h2 class="plate__title">WHEN TO TRUST A SINGLE THRESHOLD</h2>
+                    <p class="plate__summary">Heat Aware&#39;s simplest version — one number, one phone call — is the feature, not the bug. Here&#39;s where a bare threshold holds up, and where it quietly doesn&#39;t.</p>
+                    <div class="plate__tags"><b>&#9612;TAGS</b>&nbsp;&nbsp;IOT&nbsp;/&nbsp;ARCHITECTURE&nbsp;/&nbsp;OPINION</div>
+                    <span class="plate__reading-time">1 MIN READ</span>
+                    <a class="plate__open" href="diary/entries/03-heat-aware-thresholds.html">[ OPEN_TRANSMISSION 03 &rarr; ]</a>
+                </div>
+                <div class="plate__media">
+                    <picture><source srcset="assets/projects/project3.webp" type="image/webp"><img src="assets/projects/project3.jpeg" alt="Raspberry Pi wired to a digital temperature sensor on a breadboard" loading="lazy" decoding="async"></picture>
+                    <span class="plate__tick plate__tick--tl"></span>
+                    <span class="plate__tick plate__tick--tr"></span>
+                    <span class="plate__tick plate__tick--bl"></span>
+                    <span class="plate__tick plate__tick--br"></span>
+                </div>
+            </article>
+        <!-- /prerender:diaryStack --></div>
 
         <footer class="diary-footer">
             <a href="index.html" class="diary-back-link">← RETURN TO PORTFOLIO</a>
@@ -314,8 +372,13 @@
                 <span class="reader__date" id="diaryReaderDate">—</span>
             </div>
             <div class="reader__nav">
-                <button class="reader__nav-btn reader__nav-btn--prev" id="diaryReaderPrev" type="button" aria-label="Previous transmission" disabled>‹ PREV</button>
-                <button class="reader__nav-btn reader__nav-btn--next" id="diaryReaderNext" type="button" aria-label="Next transmission">NEXT ›</button>
+                <button class="reader__nav-btn reader__nav-btn--prev" id="diaryReaderPrev" type="button" aria-label="Previous transmission" disabled>‹ <span class="reader__nav-label">PREV</span></button>
+                <button class="reader__nav-btn reader__nav-btn--next" id="diaryReaderNext" type="button" aria-label="Next transmission"><span class="reader__nav-label">NEXT</span> ›</button>
+            </div>
+            <div class="reader__share" id="diaryReaderShare">
+                <a class="reader__share-btn" id="diaryReaderShareX" href="https://twitter.com/intent/tweet" target="_blank" rel="noopener noreferrer" aria-label="Share this transmission on X">X ↗</a>
+                <button class="reader__share-btn" id="diaryReaderShareCopy" type="button" aria-label="Copy link to this transmission">COPY ⧉</button>
+                <button class="reader__share-btn" id="diaryReaderShareNative" type="button" aria-label="Share this transmission" hidden>SHARE ↗</button>
             </div>
             <button class="reader__close" id="diaryReaderClose" type="button" aria-label="Close transmission">[ ESC ] CLOSE</button>
         </div>
@@ -335,8 +398,7 @@
 
     <!-- SCRIPTS — deferred for parallel download and non-blocking execution -->
     <script src="vendor/js-yaml.min.js" defer></script>
-    <!-- markdown-it — parses each entry's Markdown body file into HTML (global: markdownit) -->
-    <script src="vendor/markdown-it.min.js" defer></script>
+    <!-- markdown-it is lazy-loaded by js/diary.js on first reader open (perf) -->
     <script src="vendor/gsap.min.js" defer></script>
     <script src="vendor/ScrollTrigger.min.js" defer></script>
     <script src="js/bayer-background.js" defer></script>

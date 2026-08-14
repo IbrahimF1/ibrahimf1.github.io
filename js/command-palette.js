@@ -220,5 +220,20 @@
     var btn = document.getElementById('navCmdK');
     if (btn) btn.addEventListener('click', function (e) { e.preventDefault(); toggle(); });
 
+    // Mobile menu row — the .mobile-menu-cmdk button is static markup placed
+    // beside #mobileMenuLinks, so a delegated listener survives main.js's
+    // dynamic population. Closes the mobile menu first (restores body scroll),
+    // then opens the palette on the next frame. open() itself carries no
+    // analytics, so the event is tracked here exactly once per invocation.
+    document.addEventListener('click', function (e) {
+        var hit = e.target && e.target.closest ? e.target.closest('.mobile-menu-cmdk') : null;
+        if (!hit) return;
+        e.preventDefault();
+        var burger = document.querySelector('.nav-hamburger[aria-expanded="true"]');
+        if (burger) burger.click();
+        if (window.umami && typeof window.umami.track === 'function') window.umami.track('cmdk_open');
+        requestAnimationFrame(function () { open(); });
+    });
+
     window.commandPalette = { open: open, close: close, toggle: toggle };
 })();

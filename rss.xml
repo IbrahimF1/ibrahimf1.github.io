@@ -1,44 +1,90 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom">
+<rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom" xmlns:content="http://purl.org/rss/1.0/modules/content/">
   <channel>
     <title>Dev Diary — Ibrahim Faruquee</title>
     <link>https://ibrahimf1.github.io/diary.html</link>
     <description>Development journal of Ibrahim Faruquee — field notes on full-stack builds, applied machine learning, real-time systems, and the interfaces in between.</description>
     <language>en-us</language>
-    <lastBuildDate>Thu, 13 Aug 2026 00:00:00 GMT</lastBuildDate>
+    <lastBuildDate>Fri, 14 Aug 2026 21:27:00 GMT</lastBuildDate>
     <atom:link href="https://ibrahimf1.github.io/rss.xml" rel="self" type="application/rss+xml"/>
 
     <item>
       <title>WHY ONE INTERFACE FELT WRONG</title>
-      <link>https://ibrahimf1.github.io/diary.html</link>
-      <guid isPermaLink="false">https://ibrahimf1.github.io/diary.html#entry-01</guid>
-      <pubDate>12 Jun 2026 00:00:00 GMT</pubDate>
-      <description><![CDATA[FaceyBuk's shared parent/child UI technically worked — until splitting it by role turned a video call into a shared room. Same story, two intents.]]></description>
+      <link>https://ibrahimf1.github.io/diary/entries/01-faceybuk-role-split.html</link>
+      <guid isPermaLink="true">https://ibrahimf1.github.io/diary/entries/01-faceybuk-role-split.html</guid>
+      <pubDate>Fri, 12 Jun 2026 00:00:00 GMT</pubDate>
+      <description>FaceyBuk&#39;s shared parent/child UI technically worked — until splitting it by role turned a video call into a shared room. Same story, two intents.</description>
       <category>UX</category>
       <category>WEBRTC</category>
       <category>ROLE</category>
+      <content:encoded><![CDATA[<p class="diary-body__paragraph">The first version of FaceyBuk shipped a single shared interface — same buttons, same layout, whether you were the parent reading or the child listening. Technically correct. Emotionally flat. The child stared at a row of controls they'd never touch; the parent squinted at cartoon avatars sized for a five-year-old. It read as &quot;video call with a story bolted on,&quot; not &quot;a room you're both in.&quot;</p>
+<p class="diary-body__paragraph">The fix wasn't better styling — it was <em>role</em>. The same story object now renders two entirely different affordances: the parent gets a control surface (line queue, pace, who speaks next), the child gets an engagement surface (characters that animate and voice their own lines via the Web Speech API). Same data, two intents.</p>
+<div class="diary-body__code"><span class="diary-body__code-label">js</span><pre>// render by intent, not by route
+const role = localStorage.getItem('role');
+const view = role === 'parent' ? ControlView : StoryView;
+view(story.at(cursor)).mount();
+</pre></div><h3 class="diary-body__heading">WHAT I'D STILL CHANGE</h3>
+<ul class="diary-body__list">
+<li>The role lives in <code>localStorage</code> — refresh on the wrong tab and you're suddenly the child mid-story. It should be derived from the room handshake.</li>
+<li>The child's view has no way to signal &quot;slow down&quot; back to the parent. Engagement without feedback is still one-directional.</li>
+<li>Character avatars should react to the parent's audio amplitude — if Dad gets loud, the bear should flinch.</li>
+</ul>
+]]></content:encoded>
     </item>
 
     <item>
       <title>3D MARKERS FROM A FLAT SCREENSHOT</title>
-      <link>https://ibrahimf1.github.io/diary.html</link>
-      <guid isPermaLink="false">https://ibrahimf1.github.io/diary.html#entry-02</guid>
-      <pubDate>28 May 2026 00:00:00 GMT</pubDate>
-      <description><![CDATA[Gemini finds evidence in 2D. Dropping those detections back into world space without raycasting the whole scene to death is the entire job.]]></description>
+      <link>https://ibrahimf1.github.io/diary/entries/02-scenesplat-3d-markers.html</link>
+      <guid isPermaLink="true">https://ibrahimf1.github.io/diary/entries/02-scenesplat-3d-markers.html</guid>
+      <pubDate>Thu, 28 May 2026 00:00:00 GMT</pubDate>
+      <description>Gemini finds evidence in 2D. Dropping those detections back into world space without raycasting the whole scene to death is the entire job.</description>
       <category>THREE.JS</category>
       <category>PERF</category>
       <category>AI</category>
+      <content:encoded><![CDATA[<p class="diary-body__paragraph">Gemini is good at telling you &quot;there's a knife, top-left of frame.&quot; It is profoundly unhelpful at telling you <em>where that knife lives in world space</em>. SceneSplat's vision pipeline takes a flat screenshot of the React Three Fiber viewport and has to drop a labeled marker at a precise 3D coordinate. The naive version — fire a ray from each detected box center into the scene — melts the frame budget on a dense <code>.glb</code> and misses constantly behind geometry.</p>
+<h3 class="diary-body__heading">THE SHORTCUTS THAT MATTERED</h3>
+<ul class="diary-body__list">
+<li>Read the depth buffer at the detection's screen-space centroid instead of raycasting the whole BVH. One texel lookup, not a tree traversal.</li>
+<li>Pre-compute and cache each scene's bounding box on load; markers snap inside it and never drift into the void.</li>
+<li>Convert screen→world in the <em>same camera space</em> the screenshot was captured in, so zoom and orbit are already accounted for.</li>
+<li>Persist markers per session — Gemini doesn't need to re-see what it already found.</li>
+</ul>
+<div class="diary-body__code"><span class="diary-body__code-label">js</span><pre>// one depth read beats a full raycast
+const ndc = screenToNDC(box.center);
+const depth = readDepthBuffer(ndc);
+const world = screenToWorld(ndc, depth);
+marker.position.copy(world);
+</pre></div><p class="diary-body__paragraph">Net result: markers land where a human would place them, at a fraction of the cost. The lesson I keep relearning — if a per-frame cost is uniform, it's almost always a lookup table in disguise. A depth buffer is just the 3D version.</p>
+]]></content:encoded>
     </item>
 
     <item>
       <title>WHEN TO TRUST A SINGLE THRESHOLD</title>
-      <link>https://ibrahimf1.github.io/diary.html</link>
-      <guid isPermaLink="false">https://ibrahimf1.github.io/diary.html#entry-03</guid>
-      <pubDate>03 May 2026 00:00:00 GMT</pubDate>
-      <description><![CDATA[Heat Aware's simplest version — one number, one phone call — is the feature, not the bug. Here's where a bare threshold holds up, and where it quietly doesn't.]]></description>
+      <link>https://ibrahimf1.github.io/diary/entries/03-heat-aware-thresholds.html</link>
+      <guid isPermaLink="true">https://ibrahimf1.github.io/diary/entries/03-heat-aware-thresholds.html</guid>
+      <pubDate>Sun, 03 May 2026 00:00:00 GMT</pubDate>
+      <description>Heat Aware&#39;s simplest version — one number, one phone call — is the feature, not the bug. Here&#39;s where a bare threshold holds up, and where it quietly doesn&#39;t.</description>
       <category>IOT</category>
       <category>ARCHITECTURE</category>
       <category>OPINION</category>
+      <content:encoded><![CDATA[<p class="diary-body__paragraph">Heat Aware's core loop is almost embarrassingly simple: poll a DS18B20, compare to a number, call Twilio if it's too hot. The temptation — especially with a Raspberry Pi and a MongoDB instance sitting right there — is to make it clever. Rolling averages. Rate-of-change. Humidity compensation. A little model. I didn't, and I've come to think that's the point.</p>
+<blockquote class="diary-body__quote">
+<p class="diary-body__paragraph">The best safety system is the one whose behavior you can recite from memory at 3am.</p>
+</blockquote>
+<h3 class="diary-body__heading">WHERE IT HELPS</h3>
+<ul class="diary-body__list">
+<li>A bare threshold is fully auditable — every alert maps to one reading above one number.</li>
+<li>Debugging is trivial: the Mongo log <em>is</em> the decision history.</li>
+<li>It fails predictably, and predictable failure is what you want in something that calls a caregiver's phone.</li>
+</ul>
+<h3 class="diary-body__heading">WHERE IT HURTS</h3>
+<ul class="diary-body__list">
+<li>Sensor noise spikes fire false alarms — a single bad read at 41°C wakes someone up. Hysteresis is mandatory, not optional.</li>
+<li>A pure threshold has no concept of rate. A cabin climbing 2°C a minute is an emergency long before it crosses the line.</li>
+<li>&quot;Configurable&quot; is a lie until someone builds a UI. Right now the threshold lives in a config file only I understand.</li>
+</ul>
+<p class="diary-body__paragraph">For a one-sensor, one-phone system, the trade is obvious. The day I add a second sensor, or a second household, I'll reach for something stateful and windowed. Until then, a number and a phone call.</p>
+]]></content:encoded>
     </item>
   </channel>
 </rss>

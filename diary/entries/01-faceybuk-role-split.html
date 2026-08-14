@@ -1,0 +1,233 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+    <meta name="theme-color" content="#0a0a0a">
+    <meta name="color-scheme" content="dark">
+    <title>WHY ONE INTERFACE FELT WRONG — Dev Diary — Ibrahim Faruquee</title>
+    <meta name="description" content="FaceyBuk&#39;s shared parent/child UI technically worked — until splitting it by role turned a video call into a shared room. Same story, two intents.">
+    <link rel="canonical" href="https://ibrahimf1.github.io/diary/entries/01-faceybuk-role-split.html">
+    <meta name="robots" content="index, follow, max-image-preview:large">
+    <meta name="author" content="Ibrahim Faruquee">
+    <meta name="referrer" content="strict-origin-when-cross-origin">
+    <link rel="icon" type="image/svg+xml" href="../../assets/favicon.svg">
+    <link rel="alternate" type="application/rss+xml" title="Dev Diary — Ibrahim Faruquee" href="https://ibrahimf1.github.io/rss.xml">
+    <!-- Open Graph -->
+    <meta property="og:type" content="article">
+    <meta property="og:title" content="WHY ONE INTERFACE FELT WRONG — Dev Diary — Ibrahim Faruquee">
+    <meta property="og:description" content="FaceyBuk&#39;s shared parent/child UI technically worked — until splitting it by role turned a video call into a shared room. Same story, two intents.">
+    <meta property="og:image" content="https://ibrahimf1.github.io/assets/projects/project1.png">
+    <meta property="og:url" content="https://ibrahimf1.github.io/diary/entries/01-faceybuk-role-split.html">
+    <meta property="og:site_name" content="Ibrahim Faruquee">
+    <meta property="og:locale" content="en_US">
+    <!-- Twitter -->
+    <meta name="twitter:card" content="summary_large_image">
+    <meta name="twitter:title" content="WHY ONE INTERFACE FELT WRONG — Dev Diary — Ibrahim Faruquee">
+    <meta name="twitter:description" content="FaceyBuk&#39;s shared parent/child UI technically worked — until splitting it by role turned a video call into a shared room. Same story, two intents.">
+    <meta name="twitter:image" content="https://ibrahimf1.github.io/assets/projects/project1.png">
+    <!-- Structured data (JSON-LD): BlogPosting -->
+    <script type="application/ld+json">{"@context":"https://schema.org","@type":"BlogPosting","headline":"WHY ONE INTERFACE FELT WRONG","datePublished":"2026-06-12","dateModified":"2026-06-12","author":{"@type":"Person","name":"Ibrahim Faruquee","url":"https://ibrahimf1.github.io/#person"},"mainEntityOfPage":"https://ibrahimf1.github.io/diary/entries/01-faceybuk-role-split.html","image":"https://ibrahimf1.github.io/assets/projects/project1.png","inLanguage":"en-US"}</script>
+    <link rel="stylesheet" href="../../css/diary.css">
+    <style>
+/* Static entry shell — tokens mirror the diary.html critical CSS.
+   diary.css provides the .diary-body__* typography; these overrides
+   exist because its @font-face/tokens live in page-relative URLs that
+   break from diary/entries/ depth. */
+@font-face {
+    font-family: 'Datatype';
+    src: url('../../fonts/Datatype.wdth.wght.woff2') format('woff2');
+    font-weight: 100 900;
+    font-stretch: 75% 125%;
+    font-display: swap;
+}
+@font-face { font-family: 'Space Mono'; font-style: normal; font-weight: 400; font-display: swap; src: url('../../fonts/spacemono-normal-400-latin.woff2') format('woff2'); }
+@font-face { font-family: 'Space Mono'; font-style: normal; font-weight: 700; font-display: swap; src: url('../../fonts/spacemono-normal-700-latin.woff2') format('woff2'); }
+@font-face { font-family: 'Space Mono'; font-style: italic; font-weight: 400; font-display: swap; src: url('../../fonts/spacemono-italic-400-latin.woff2') format('woff2'); }
+
+:root {
+    --bg: #0a0a0a;
+    --bg-elevated: #111110;
+    --fg: #c8c2b8;
+    --fg-dim: #827a70;
+    --fg-bright: #e8e4df;
+    --accent: #8a7f72;
+    --accent-bright: #b5a898;
+    --border: #2a2825;
+    --border-bright: #3a3632;
+    --highlight: #d4c5ab;
+    --error: #8a6f5f;
+    --font-mono: 'Space Mono', 'Courier New', monospace;
+    --font-display: 'Datatype', 'Space Mono', monospace;
+    --transition-raw: 0.1s steps(2)
+}
+
+*,
+*::before,
+*::after { margin: 0; padding: 0; box-sizing: border-box; }
+
+html { scrollbar-width: thin; scrollbar-color: var(--fg-dim) var(--bg); }
+
+body {
+    background: var(--bg);
+    color: var(--fg);
+    font-family: var(--font-mono);
+    font-size: 14px;
+    line-height: 1.6;
+    -webkit-font-smoothing: antialiased;
+}
+
+a { cursor: pointer; }
+
+.ep-header {
+    position: sticky;
+    top: 0;
+    z-index: 10;
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    gap: 16px;
+    flex-wrap: wrap;
+    padding: 16px 24px;
+    border-bottom: 1px solid var(--border);
+    background: rgba(10, 10, 10, 0.92);
+    -webkit-backdrop-filter: blur(10px);
+    backdrop-filter: blur(10px);
+    font-size: 11px;
+    letter-spacing: 0.2em;
+    text-transform: uppercase;
+}
+.ep-brand {
+    font-family: var(--font-display);
+    font-weight: 700;
+    font-stretch: 100%;
+    letter-spacing: 0.02em;
+    color: var(--fg-bright);
+    text-decoration: none;
+}
+.ep-brand span { color: var(--highlight); font-weight: 400; }
+.ep-back { color: var(--accent-bright); text-decoration: none; font-variant-numeric: tabular-nums; }
+.ep-back:hover, .ep-interactive:hover, .ep-nav-btn:hover { color: var(--highlight); }
+
+.ep-main {
+    max-width: 760px;
+    margin: 0 auto;
+    padding: 56px 24px 72px;
+}
+
+.ep-eyebrow {
+    font-size: 11px;
+    letter-spacing: 0.35em;
+    text-transform: uppercase;
+    color: var(--accent);
+    margin-bottom: 16px;
+}
+.ep-title {
+    font-family: var(--font-display);
+    font-size: clamp(30px, 6vw, 54px);
+    font-weight: 800;
+    font-stretch: 82%;
+    line-height: 0.95;
+    letter-spacing: -0.02em;
+    text-transform: uppercase;
+    color: var(--fg-bright);
+    margin-bottom: 18px;
+}
+.ep-meta {
+    display: flex;
+    gap: 14px;
+    font-size: 11px;
+    letter-spacing: 0.25em;
+    text-transform: uppercase;
+    color: var(--fg-dim);
+    font-variant-numeric: tabular-nums;
+    margin-bottom: 40px;
+}
+.ep-image { margin: 0 0 40px; border: 1px solid var(--border); }
+.ep-image img { display: block; width: 100%; height: auto; filter: grayscale(35%) contrast(1.1) brightness(0.9); }
+
+.ep-footer {
+    border-top: 1px solid var(--border);
+    margin-top: 64px;
+    padding-top: 28px;
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+}
+.ep-nav { display: flex; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
+.ep-nav-btn {
+    font-family: var(--font-mono);
+    font-size: 11px;
+    letter-spacing: 0.2em;
+    text-transform: uppercase;
+    text-decoration: none;
+    color: var(--highlight);
+    border: 1px solid var(--border-bright);
+    padding: 10px 14px;
+    transition: color var(--transition-raw), border-color var(--transition-raw);
+}
+.ep-nav-btn:hover { border-color: var(--highlight); }
+.ep-nav-btn--off { color: var(--fg-dim); opacity: 0.45; }
+.ep-interactive {
+    align-self: flex-start;
+    font-size: 11px;
+    letter-spacing: 0.3em;
+    text-transform: uppercase;
+    color: var(--highlight);
+    text-decoration: none;
+}
+.ep-copy { font-size: 10px; letter-spacing: 0.2em; text-transform: uppercase; color: var(--fg-dim); }
+
+@media (max-width: 600px) {
+    .ep-header { padding: 14px 16px; }
+    .ep-main { padding: 40px 16px 56px; }
+}
+</style>
+</head>
+
+<body>
+    <!-- Static, JS-free article shell; the interactive version lives at ../../diary.html#entry-01 -->
+    <header class="ep-header">
+        <a class="ep-brand" href="../../index.html">IBRAHIM<span>F</span></a>
+        <a class="ep-back" href="../../diary.html">[&larr; DEV_DIARY://LOG]</a>
+    </header>
+
+    <main class="ep-main">
+        <p class="ep-eyebrow">DEV DIARY // TRANSMISSION 01</p>
+        <h1 class="ep-title">WHY ONE INTERFACE FELT WRONG</h1>
+        <p class="ep-meta">
+            <span>2026.06.12</span>
+            <span>1 MIN READ</span>
+        </p>
+        <figure class="ep-image">
+            <picture><source srcset="../../assets/projects/project1.webp" type="image/webp"><img src="../../assets/projects/project1.png" alt="Side-by-side parent control view and child story view from FaceyBuk" loading="lazy" decoding="async"></picture>
+        </figure>
+        <div class="ep-body">
+        <p class="diary-body__paragraph">The first version of FaceyBuk shipped a single shared interface — same buttons, same layout, whether you were the parent reading or the child listening. Technically correct. Emotionally flat. The child stared at a row of controls they'd never touch; the parent squinted at cartoon avatars sized for a five-year-old. It read as &quot;video call with a story bolted on,&quot; not &quot;a room you're both in.&quot;</p>
+        <p class="diary-body__paragraph">The fix wasn't better styling — it was <em>role</em>. The same story object now renders two entirely different affordances: the parent gets a control surface (line queue, pace, who speaks next), the child gets an engagement surface (characters that animate and voice their own lines via the Web Speech API). Same data, two intents.</p>
+        <div class="diary-body__code"><span class="diary-body__code-label">js</span><pre>// render by intent, not by route
+        const role = localStorage.getItem('role');
+        const view = role === 'parent' ? ControlView : StoryView;
+        view(story.at(cursor)).mount();
+        </pre></div><h3 class="diary-body__heading">WHAT I'D STILL CHANGE</h3>
+        <ul class="diary-body__list">
+        <li>The role lives in <code>localStorage</code> — refresh on the wrong tab and you're suddenly the child mid-story. It should be derived from the room handshake.</li>
+        <li>The child's view has no way to signal &quot;slow down&quot; back to the parent. Engagement without feedback is still one-directional.</li>
+        <li>Character avatars should react to the parent's audio amplitude — if Dad gets loud, the bear should flinch.</li>
+        </ul>
+
+        </div>
+
+        <footer class="ep-footer">
+            <div class="ep-nav">
+                <span class="ep-nav-btn ep-nav-btn--off" aria-disabled="true">&lsaquo; PREV</span>
+                <a class="ep-nav-btn" href="02-scenesplat-3d-markers.html">NEXT: 3D MARKERS FROM A FLAT SCREENSHOT &rsaquo;</a>
+            </div>
+            <a class="ep-interactive" href="../../diary.html#entry-01">OPEN INTERACTIVE VERSION &#8599;</a>
+            <p class="ep-copy">© 2026 — IBRAHIM FARUQUEE</p>
+        </footer>
+    </main>
+</body>
+
+</html>

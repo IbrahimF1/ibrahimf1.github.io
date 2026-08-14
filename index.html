@@ -518,7 +518,13 @@
     <!-- NAV — dynamically populated from YAML -->
     <nav class="nav-bar">
         <a href="#hero" class="nav-brand" data-cursor="link">IBRAHIM<span>F</span></a>
-        <div class="nav-links" id="navLinks"></div>
+        <div class="nav-links" id="navLinks"><!-- prerender:navLinks -->
+            <a class="nav-link" href="#hero">HOME</a>
+            <a class="nav-link" href="#about">ABOUT</a>
+            <a class="nav-link" href="#projects">PROJECTS</a>
+            <a class="nav-link" href="#experience">EXPERIENCE</a>
+            <a class="nav-link" href="#contact">CONTACT</a>
+        <!-- /prerender:navLinks --></div>
         <div class="nav-status">
             <span class="nav-dot"></span>
             <span id="navClock">NYC —</span>
@@ -531,9 +537,15 @@
         </button>
     </nav>
 
-    <!-- MOBILE MENU OVERLAY — dynamically populated from YAML -->
+    <!-- MOBILE MENU OVERLAY — links dynamically populated from YAML into
+         #mobileMenuLinks; the cmdk trigger is static markup OUTSIDE that
+         container so population can never clobber it (wired in
+         js/command-palette.js). -->
     <div class="mobile-menu" aria-hidden="true">
-        <div class="mobile-menu-inner" id="mobileMenuLinks"></div>
+        <div class="mobile-menu-inner">
+            <button class="mobile-menu-cmdk" type="button">&#8984;K — COMMANDS / SEARCH</button>
+            <div id="mobileMenuLinks"></div>
+        </div>
         <div class="mobile-menu-footer">
             <span>SYS::ACTIVE</span>
             <span>v2.0.0</span>
@@ -549,48 +561,271 @@
             </div>
             <div class="hero-name" id="heroName"><span class="line line--solid">IBRAHIM</span><span class="line line--stroke">FARUQUEE</span></div>
             <div class="hero-role" id="heroRole">SOFTWARE / ENGINEER &amp; ML</div>
-            <div class="hero-social-row" id="heroSocial"><!-- populated from YAML --></div>
+            <div class="hero-social-row" id="heroSocial"><!-- prerender:heroSocial -->
+                <a class="hero-social-link" href="https://github.com/IbrahimF1" target="_blank" rel="noopener noreferrer"><div class="hero-social hero-social--github"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor"><polygon points="23 9 23 15 22 15 22 17 21 17 21 19 20 19 20 20 19 20 19 21 18 21 18 22 16 22 16 23 15 23 15 18 14 18 14 17 15 17 15 16 17 16 17 15 18 15 18 14 19 14 19 9 18 9 18 6 16 6 16 7 15 7 15 8 14 8 14 7 10 7 10 8 9 8 9 7 8 7 8 6 6 6 6 9 5 9 5 14 6 14 6 15 7 15 7 16 9 16 9 18 7 18 7 17 6 17 6 16 4 16 4 17 5 17 5 19 6 19 6 20 9 20 9 23 8 23 8 22 6 22 6 21 5 21 5 20 4 20 4 19 3 19 3 17 2 17 2 15 1 15 1 9 2 9 2 7 3 7 3 5 4 5 4 4 5 4 5 3 7 3 7 2 9 2 9 1 15 1 15 2 17 2 17 3 19 3 19 4 20 4 20 5 21 5 21 7 22 7 22 9 23 9" /></svg></div><span class="hero-social__label">GitHub</span></a>
+                <a class="hero-social-link" href="https://www.linkedin.com/in/ibrahim-f1" target="_blank" rel="noopener noreferrer"><div class="hero-social hero-social--linkedin"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor"><path d="m22,2v-1H2v1h-1v20h1v1h20v-1h1V2h-1Zm-9,10v8h-3v-11h3v1h1v-1h4v1h1v10h-3v-8h-3Zm-9-4v-3h3v3h-3Zm3,1v11h-3v-11h3Z" /></svg></div><span class="hero-social__label">LinkedIn</span></a>
+            <!-- /prerender:heroSocial --></div>
             <button class="hero-scroll-hint" id="heroScrollHint" type="button" aria-label="Scroll to about section">
                 <span class="hero-scroll-hint__label">SCROLL</span>
                 <span class="hero-scroll-hint__line" aria-hidden="true"></span>
             </button>
         </div>
-        <div class="hero-stats" id="heroStats"><!-- populated from YAML --></div>
+        <div class="hero-stats" id="heroStats"><!-- prerender:heroStats -->
+            <div class="hero-stat">
+                <div class="hero-stat-num">3</div>
+                <div class="hero-stat-label">PROJECTS SHIPPED</div>
+            </div>
+            <div class="hero-stat">
+                <div class="hero-stat-num">6<span class="suffix">x</span></div>
+                <div class="hero-stat-label">HACKATHON WINS</div>
+            </div>
+            <div class="hero-stat">
+                <div class="hero-stat-num">4<span class="suffix">+</span></div>
+                <div class="hero-stat-label">FELLOWSHIPS</div>
+            </div>
+            <div class="hero-stat">
+                <div class="hero-stat-num">2025</div>
+                <div class="hero-stat-label">GRADUATED</div>
+            </div>
+        <!-- /prerender:heroStats --></div>
     </section>
 
     <!-- ==================== MARQUEE 1 ==================== -->
     <div class="marquee" aria-hidden="true">
-        <div class="marquee-track" id="marqueeTrack1"></div>
+        <div class="marquee-track" id="marqueeTrack1"><!-- prerender:marqueeTrack1 -->
+            <span class="marquee-item">AVAILABLE FOR WORK</span><span class="marquee-sep">✦</span><span class="marquee-item">FULL-STACK ENGINEERING</span><span class="marquee-sep">✦</span><span class="marquee-item">APPLIED MACHINE LEARNING</span><span class="marquee-sep">✦</span><span class="marquee-item">REAL-TIME SYSTEMS</span><span class="marquee-sep">✦</span><span class="marquee-item">DISTRIBUTED ARCHITECTURE</span><span class="marquee-sep">✦</span><span class="marquee-item">AWARD-WINNING BUILDS</span><span class="marquee-sep">✦</span><span class="marquee-item" data-dup>AVAILABLE FOR WORK</span><span class="marquee-sep" data-dup>✦</span><span class="marquee-item" data-dup>FULL-STACK ENGINEERING</span><span class="marquee-sep" data-dup>✦</span><span class="marquee-item" data-dup>APPLIED MACHINE LEARNING</span><span class="marquee-sep" data-dup>✦</span><span class="marquee-item" data-dup>REAL-TIME SYSTEMS</span><span class="marquee-sep" data-dup>✦</span><span class="marquee-item" data-dup>DISTRIBUTED ARCHITECTURE</span><span class="marquee-sep" data-dup>✦</span><span class="marquee-item" data-dup>AWARD-WINNING BUILDS</span><span class="marquee-sep" data-dup>✦</span>
+        <!-- /prerender:marqueeTrack1 --></div>
     </div>
 
     <!-- ==================== ABOUT SECTION ==================== -->
     <section id="about" class="section about-section">
-        <div class="section-head" id="aboutHead"><!-- populated from YAML --></div>
-        <div class="about-grid" id="aboutGrid"><!-- populated from YAML --></div>
+        <div class="section-head" id="aboutHead"><!-- prerender:aboutHead -->
+            <span class="section-num">01</span>
+            <div class="section-head__meta"><span class="section-eyebrow">WHO / WHAT</span></div>
+            <div class="section-rule"></div>
+            <div class="section-titlerow">
+                <h2 class="section-title"><span class="">I BUILD</span><br><span class="">SYSTEMS</span><br><span class="gold">THAT SHIP.</span></h2>
+                <div class="section-dither" aria-hidden="true"></div>
+            </div>
+        <!-- /prerender:aboutHead --></div>
+        <div class="about-grid" id="aboutGrid"><!-- prerender:aboutGrid -->
+            <div class="about-cell about-cell--statement" style="--intro-rows:5">
+                <span class="cell-label">WHO / WHAT — BIO</span>
+                <div class="about-intro-body">
+                    <p class="about-body">Results-driven Software Engineer with a strong foundation in full-stack web development, computer science, and applied machine learning. Experienced in building production-style applications using the MERN stack, real-time systems, and AI-powered features under sprint and hackathon deadlines.</p>
+                    <p class="about-body about-body--sec">Proven collaborator with award-winning projects spanning web, 3D visualization, hardware-integrated systems, and generative AI — bringing a user-centered, systems-oriented approach to complex technical problems.</p>
+                </div>
+                <a class="about-cta" href="diary.html" data-cursor="link">
+                    <span class="about-cta__prompt">&gt;</span>
+                    <span>READ THE DEV DIARY</span>
+                    <span class="about-cta__arrow">&rarr;</span>
+                </a>
+            </div>
+            <div class="about-cell about-cell--auto">
+                <span class="cell-label">STACK</span>
+                <span class="cell-value">Python / TypeScript / React / Node.js</span>
+                <span class="about-cell__index">01</span>
+            </div>
+            <div class="about-cell about-cell--auto">
+                <span class="cell-label">FOCUS</span>
+                <span class="cell-value">Full-Stack / ML / Real-Time</span>
+                <span class="about-cell__index">02</span>
+            </div>
+            <div class="about-cell about-cell--auto">
+                <span class="cell-label">DISCIPLINE</span>
+                <span class="cell-value">Distributed Systems</span>
+                <span class="about-cell__index">03</span>
+            </div>
+            <div class="about-cell about-cell--auto">
+                <span class="cell-label">EDGE</span>
+                <span class="cell-value">Hardware-Integrated Builds</span>
+                <span class="about-cell__index">04</span>
+            </div>
+            <div class="about-cell about-cell--auto about-cell--highlight">
+                <span class="cell-label">STATUS</span>
+                <span class="cell-value">OPEN TO WORK</span>
+                <span class="about-cell__index">05</span>
+            </div>
+        <!-- /prerender:aboutGrid --></div>
     </section>
 
     <!-- ==================== MARQUEE 2 ==================== -->
     <div class="marquee marquee--rev" aria-hidden="true">
-        <div class="marquee-track" id="marqueeTrack2"></div>
+        <div class="marquee-track" id="marqueeTrack2"><!-- prerender:marqueeTrack2 -->
+            <span class="marquee-item">AVAILABLE FOR WORK</span><span class="marquee-sep">✦</span><span class="marquee-item">FULL-STACK ENGINEERING</span><span class="marquee-sep">✦</span><span class="marquee-item">APPLIED MACHINE LEARNING</span><span class="marquee-sep">✦</span><span class="marquee-item">REAL-TIME SYSTEMS</span><span class="marquee-sep">✦</span><span class="marquee-item">DISTRIBUTED ARCHITECTURE</span><span class="marquee-sep">✦</span><span class="marquee-item">AWARD-WINNING BUILDS</span><span class="marquee-sep">✦</span><span class="marquee-item" data-dup>AVAILABLE FOR WORK</span><span class="marquee-sep" data-dup>✦</span><span class="marquee-item" data-dup>FULL-STACK ENGINEERING</span><span class="marquee-sep" data-dup>✦</span><span class="marquee-item" data-dup>APPLIED MACHINE LEARNING</span><span class="marquee-sep" data-dup>✦</span><span class="marquee-item" data-dup>REAL-TIME SYSTEMS</span><span class="marquee-sep" data-dup>✦</span><span class="marquee-item" data-dup>DISTRIBUTED ARCHITECTURE</span><span class="marquee-sep" data-dup>✦</span><span class="marquee-item" data-dup>AWARD-WINNING BUILDS</span><span class="marquee-sep" data-dup>✦</span>
+        <!-- /prerender:marqueeTrack2 --></div>
     </div>
 
     <!-- ==================== PROJECTS SECTION ==================== -->
     <section id="projects" class="section projects-section">
-        <div class="section-head" id="projectsHead"><!-- populated from YAML --></div>
-        <div class="projects-grid" id="projectsGrid"><!-- populated from YAML --></div>
+        <div class="section-head" id="projectsHead"><!-- prerender:projectsHead -->
+            <span class="section-num">02</span>
+            <div class="section-head__meta"><span class="section-eyebrow">SELECTED PROJECTS</span></div>
+            <div class="section-rule"></div>
+            <div class="section-titlerow">
+                <h2 class="section-title"><span class="">BUILT TO</span><br><span class="gold">WIN.</span></h2>
+                <div class="section-dither" aria-hidden="true"></div>
+            </div>
+        <!-- /prerender:projectsHead --></div>
+        <div class="projects-grid" id="projectsGrid"><!-- prerender:projectsGrid -->
+            <a class="projects-tile projects-tile--feature" href="https://github.com/KeiraJames/nyu-hacks" target="_blank" rel="noopener noreferrer">
+                <div class="projects-tile__media">
+                    <picture><source srcset="assets/projects/project1.webp" type="image/webp"><img src="assets/projects/project1.png" alt="Interactive storytelling app" loading="lazy" decoding="async"></picture>
+                </div>
+                <div class="projects-tile__scrim"></div>
+                <div class="projects-tile__body">
+                    <div class="projects-tile__top">
+                        <span class="projects-tile__num">01</span>
+                        <span class="projects-tile__award">1ST PLACE — NYU HACKS</span>
+                    </div>
+                    <div class="projects-tile__foot">
+                        <div class="projects-tile__tags"><span class="projects-tag">HTML5</span><span class="projects-tag">CSS3</span><span class="projects-tag">JavaScript</span><span class="projects-tag">Socket.IO</span><span class="projects-tag">WebRTC</span></div>
+                <p class="projects-tile__desc"><span class="projects-tile__desc-lead">1st place-winning interactive storytelling app allowing parents to</span><span class="projects-tile__desc-ellipsis" aria-hidden="true">…</span><span class="projects-tile__desc-rest">read bedtime stories to their children in real time. Integrated WebRTC, Socket.IO, and ElevenLabs API for immersive experiences.</span></p>
+                        <h3 class="projects-tile__title">FACEY:BUK</h3>
+                    </div>
+                </div>
+                <span class="projects-tile__repo project-card-repo" aria-label="View source on GitHub"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="0.5" stroke-linejoin="round"><polygon points="23 9 23 15 22 15 22 17 21 17 21 19 20 19 20 20 19 20 19 21 18 21 18 22 16 22 16 23 15 23 15 18 14 18 14 17 15 17 15 16 17 16 17 15 18 15 18 14 19 14 19 9 18 9 18 6 16 6 16 7 15 7 15 8 14 8 14 7 10 7 10 8 9 8 9 7 8 7 8 6 6 6 6 9 5 9 5 14 6 14 6 15 7 15 7 16 9 16 9 18 7 18 7 17 6 17 6 16 4 16 4 17 5 17 5 19 6 19 6 20 9 20 9 23 8 23 8 22 6 22 6 21 5 21 5 20 4 20 4 19 3 19 3 17 2 17 2 15 1 15 1 9 2 9 2 7 3 7 3 5 4 5 4 4 5 4 5 3 7 3 7 2 9 2 9 1 15 1 15 2 17 2 17 3 19 3 19 4 20 4 20 5 21 5 21 7 22 7 22 9 23 9" /></svg></span>
+            </a>
+            <a class="projects-tile projects-tile--wide" href="https://github.com/bshiribaiev/scene-splat" target="_blank" rel="noopener noreferrer">
+                <div class="projects-tile__media">
+                    <picture><img src="assets/projects/project2-poster.jpg" alt="3D forensic analysis platform" loading="lazy" decoding="async"></picture>
+                </div>
+                <div class="projects-tile__scrim"></div>
+                <div class="projects-tile__body">
+                    <div class="projects-tile__top">
+                        <span class="projects-tile__num">02</span>
+                        <span class="projects-tile__award">1ST PLACE — 24H HACKATHON</span>
+                    </div>
+                    <div class="projects-tile__foot">
+                        <div class="projects-tile__tags"><span class="projects-tag">TypeScript</span><span class="projects-tag">React</span><span class="projects-tag">Next.js</span><span class="projects-tag">three.js</span><span class="projects-tag">Gemini API</span></div>
+                <p class="projects-tile__desc"><span class="projects-tile__desc-lead">Forensic investigation platform that automatically detects evidence in</span><span class="projects-tile__desc-ellipsis" aria-hidden="true">…</span><span class="projects-tile__desc-rest">3D scenes using Google Gemini Vision API. Won 1st Place in 24-hour hackathon with 2D-to-3D coordinate mapping algorithm.</span></p>
+                        <h3 class="projects-tile__title">SCENE:SPAT</h3>
+                    </div>
+                </div>
+                <span class="projects-tile__repo project-card-repo" aria-label="View source on GitHub"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="0.5" stroke-linejoin="round"><polygon points="23 9 23 15 22 15 22 17 21 17 21 19 20 19 20 20 19 20 19 21 18 21 18 22 16 22 16 23 15 23 15 18 14 18 14 17 15 17 15 16 17 16 17 15 18 15 18 14 19 14 19 9 18 9 18 6 16 6 16 7 15 7 15 8 14 8 14 7 10 7 10 8 9 8 9 7 8 7 8 6 6 6 6 9 5 9 5 14 6 14 6 15 7 15 7 16 9 16 9 18 7 18 7 17 6 17 6 16 4 16 4 17 5 17 5 19 6 19 6 20 9 20 9 23 8 23 8 22 6 22 6 21 5 21 5 20 4 20 4 19 3 19 3 17 2 17 2 15 1 15 1 9 2 9 2 7 3 7 3 5 4 5 4 4 5 4 5 3 7 3 7 2 9 2 9 1 15 1 15 2 17 2 17 3 19 3 19 4 20 4 20 5 21 5 21 7 22 7 22 9 23 9" /></svg></span>
+            </a>
+            <a class="projects-tile projects-tile--auto" href="https://github.com/KeiraJames/Heat-Aware" target="_blank" rel="noopener noreferrer">
+                <div class="projects-tile__media">
+                    <picture><source srcset="assets/projects/project3.webp" type="image/webp"><img src="assets/projects/project3.jpeg" alt="IoT heatstroke alert system" loading="lazy" decoding="async"></picture>
+                </div>
+                <div class="projects-tile__scrim"></div>
+                <div class="projects-tile__body">
+                    <div class="projects-tile__top">
+                        <span class="projects-tile__num">03</span>
+                        <span class="projects-tile__award">1ST PLACE — STRENGTHEN SOCIETY</span>
+                    </div>
+                    <div class="projects-tile__foot">
+                        <div class="projects-tile__tags"><span class="projects-tag">Python</span><span class="projects-tag">Node.js</span><span class="projects-tag">MongoDB</span><span class="projects-tag">Twilio API</span><span class="projects-tag">Gemini API</span></div>
+                <p class="projects-tile__desc"><span class="projects-tile__desc-lead">Real-time IoT heatstroke alert system with AI-driven notification</span><span class="projects-tile__desc-ellipsis" aria-hidden="true">…</span><span class="projects-tile__desc-rest">engine. Won 1st Place in &#39;Strengthen Society&#39; category for future vehicle safety application.</span></p>
+                        <h3 class="projects-tile__title">HEAT:AWARE</h3>
+                    </div>
+                </div>
+                <span class="projects-tile__repo project-card-repo" aria-label="View source on GitHub"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="0.5" stroke-linejoin="round"><polygon points="23 9 23 15 22 15 22 17 21 17 21 19 20 19 20 20 19 20 19 21 18 21 18 22 16 22 16 23 15 23 15 18 14 18 14 17 15 17 15 16 17 16 17 15 18 15 18 14 19 14 19 9 18 9 18 6 16 6 16 7 15 7 15 8 14 8 14 7 10 7 10 8 9 8 9 7 8 7 8 6 6 6 6 9 5 9 5 14 6 14 6 15 7 15 7 16 9 16 9 18 7 18 7 17 6 17 6 16 4 16 4 17 5 17 5 19 6 19 6 20 9 20 9 23 8 23 8 22 6 22 6 21 5 21 5 20 4 20 4 19 3 19 3 17 2 17 2 15 1 15 1 9 2 9 2 7 3 7 3 5 4 5 4 4 5 4 5 3 7 3 7 2 9 2 9 1 15 1 15 2 17 2 17 3 19 3 19 4 20 4 20 5 21 5 21 7 22 7 22 9 23 9" /></svg></span>
+            </a>
+        <!-- /prerender:projectsGrid --></div>
     </section>
 
     <!-- ==================== EXPERIENCE SECTION ==================== -->
     <section id="experience" class="section experience-section">
-        <div class="section-head" id="experienceHead"><!-- populated from YAML --></div>
-        <div class="experience-list" id="experienceList"><!-- populated from YAML --></div>
+        <div class="section-head" id="experienceHead"><!-- prerender:experienceHead -->
+            <span class="section-num">03</span>
+            <div class="section-head__meta"><span class="section-eyebrow">EXPERIENCE</span></div>
+            <div class="section-rule"></div>
+            <div class="section-titlerow">
+                <h2 class="section-title"><span class="">WHERE I&#39;VE</span><br><span class="gold">LEVELED UP.</span></h2>
+                <div class="section-dither" aria-hidden="true"></div>
+            </div>
+        <!-- /prerender:experienceHead --></div>
+        <div class="experience-list" id="experienceList"><!-- prerender:experienceList -->
+            <div class="experience-row">
+                <div class="experience-row__index">01</div>
+                <div class="experience-row__period">2026—NOW</div>
+                <div class="experience-row__role">
+                    <span class="ttl">AI TECH FELLOW</span>
+                    <span class="co">CODEPATH</span>
+                </div>
+                <div class="experience-row__desc">Mentored 15+ students in applied AI engineering on PyTorch, LLM integration, RAG, and AI-assisted Python workflows.</div>
+                <div class="experience-row__tags"><span class="experience-tag">PyTorch</span><span class="experience-tag">LLM</span><span class="experience-tag">RAG</span><span class="experience-tag">AI Engineering</span></div>
+            </div>
+            <div class="experience-row">
+                <div class="experience-row__index">02</div>
+                <div class="experience-row__period">2024—25</div>
+                <div class="experience-row__role">
+                    <span class="ttl">DATA SCIENCE FELLOW</span>
+                    <span class="co">CUNY TECH PREP</span>
+                </div>
+                <div class="experience-row__desc">Courses in exploratory data analysis, feature engineering, and data collection. Built projects with Pandas, Scikit-learn, MySQL.</div>
+                <div class="experience-row__tags"><span class="experience-tag">Python</span><span class="experience-tag">Pandas</span><span class="experience-tag">Scikit-learn</span><span class="experience-tag">MySQL</span></div>
+            </div>
+            <div class="experience-row">
+                <div class="experience-row__index">03</div>
+                <div class="experience-row__period">2025</div>
+                <div class="experience-row__role">
+                    <span class="ttl">SE MENTEE</span>
+                    <span class="co">GOOGLE × CODEPATH</span>
+                </div>
+                <div class="experience-row__desc">Mentorship program focused on software engineering best practices and industry-aligned development.</div>
+                <div class="experience-row__tags"><span class="experience-tag">Mentorship</span><span class="experience-tag">Software Engineering</span></div>
+            </div>
+            <div class="experience-row">
+                <div class="experience-row__index">04</div>
+                <div class="experience-row__period">2025</div>
+                <div class="experience-row__role">
+                    <span class="ttl">DATA ANALYTICS FELLOW</span>
+                    <span class="co">COOP CAREER</span>
+                </div>
+                <div class="experience-row__desc">Fellowship in data analytics with hands-on experience in data analysis and visualization.</div>
+                <div class="experience-row__tags"><span class="experience-tag">Data Analytics</span><span class="experience-tag">Visualization</span></div>
+            </div>
+        <!-- /prerender:experienceList --></div>
+    </section>
+
+    <!-- ==================== DIARY TEASER (interstitial — not a numbered nav section) ==================== -->
+    <section id="diary-latest" class="section diary-teaser" aria-labelledby="diaryTeaserHead">
+        <div class="diary-teaser__head">
+            <h2 class="section-eyebrow" id="diaryTeaserHead">DEV DIARY // LATEST TRANSMISSIONS</h2>
+            <a class="diary-teaser__open" href="diary.html" data-cursor="link">OPEN THE DIARY &rarr;</a>
+        </div>
+        <div class="diary-teaser__grid" id="diaryTeaserGrid" aria-live="polite"><!-- prerender:diaryTeaserGrid -->
+            <a class="diary-teaser__card" href="diary.html#entry-01" data-cursor="link"><span class="diary-teaser__date">2026.06.12</span><span class="diary-teaser__title">WHY ONE INTERFACE FELT WRONG</span><span class="diary-teaser__summary">FaceyBuk&#39;s shared parent/child UI technically worked — until splitting it by role turned a video call into a shared room. Same story, two intents.</span><span class="diary-teaser__tags"><span class="diary-teaser__tag">UX</span><span class="diary-teaser__tag">WEBRTC</span><span class="diary-teaser__tag">ROLE</span></span><span class="diary-teaser__time" title="Estimate from the entry summary — the full read runs longer">~1 MIN</span></a>
+            <a class="diary-teaser__card" href="diary.html#entry-02" data-cursor="link"><span class="diary-teaser__date">2026.05.28</span><span class="diary-teaser__title">3D MARKERS FROM A FLAT SCREENSHOT</span><span class="diary-teaser__summary">Gemini finds evidence in 2D. Dropping those detections back into world space without raycasting the whole scene to death is the entire job.</span><span class="diary-teaser__tags"><span class="diary-teaser__tag">THREE.JS</span><span class="diary-teaser__tag">PERF</span><span class="diary-teaser__tag">AI</span></span><span class="diary-teaser__time" title="Estimate from the entry summary — the full read runs longer">~1 MIN</span></a>
+        <!-- /prerender:diaryTeaserGrid --></div>
     </section>
 
     <!-- ==================== CONTACT SECTION ==================== -->
     <section id="contact" class="section contact-section">
-        <div class="section-head section-head--contact" id="contactHead"><!-- populated from YAML --></div>
-        <div class="contact-grid" id="contactGrid"><!-- populated from YAML --></div>
-        <div class="contact-footer" id="contactFooter"><!-- populated from YAML --></div>
+        <div class="section-head section-head--contact" id="contactHead"><!-- prerender:contactHead -->
+            <span class="section-num">04</span>
+            <div class="section-head__meta"><span class="section-eyebrow">LET&#39;S TALK</span></div>
+            <div class="section-rule"></div>
+            <div class="section-titlerow">
+                <h2 class="section-title"><span class="">LET&#39;S</span><br><span class="gold">BUILD.</span></h2>
+                <div class="contact-portrait" aria-hidden="true"></div>
+            </div>
+        <!-- /prerender:contactHead --></div>
+        <div class="contact-grid" id="contactGrid"><!-- prerender:contactGrid -->
+            <a class="contact-tile" href="mailto:ifaruquee1@gmail.com" aria-label="EMAIL">
+                <span class="contact-tile__label">EMAIL</span>
+                <span class="contact-tile__value">ifaruquee1@gmail.com</span>
+                <span class="contact-tile__arrow">&rarr;</span>
+            </a>
+            <a class="contact-tile" href="https://github.com/IbrahimF1" target="_blank" rel="noopener noreferrer" aria-label="GITHUB">
+                <span class="contact-tile__label">GITHUB</span>
+                <span class="contact-tile__value">github.com/IbrahimF1</span>
+                <span class="contact-tile__arrow">&rarr;</span>
+            </a>
+            <a class="contact-tile" href="https://www.linkedin.com/in/ibrahim-f1" target="_blank" rel="noopener noreferrer" aria-label="LINKEDIN">
+                <span class="contact-tile__label">LINKEDIN</span>
+                <span class="contact-tile__value">linkedin.com/in/ibrahim-f1</span>
+                <span class="contact-tile__arrow">&rarr;</span>
+            </a>
+        <!-- /prerender:contactGrid --></div>
+        <div class="contact-footer" id="contactFooter"><!-- prerender:contactFooter -->
+            <span>© 2026 — IBRAHIM FARUQUEE</span>
+            <span>DESIGNED &amp; ENGINEERED</span>
+            <span>1–5 SECTIONS · ⌘K COMMANDS</span>
+            <span>v2.0.0</span>
+        <!-- /prerender:contactFooter --></div>
     </section>
 
     <!-- No-JS fallback — the page is data-driven by JavaScript; without it this
@@ -619,6 +854,8 @@
     <script src="js/bayer-background.js" defer></script>
     <script src="js/favicon.js" defer></script>
     <script src="js/main.js" defer></script>
+    <!-- Homepage diary teaser (between EXPERIENCE and CONTACT) -->
+    <script src="js/diary-teaser.js" defer></script>
     <!-- Command palette (Cmd/Ctrl+K) keyboard navigation -->
     <script src="js/command-palette.js" defer></script>
     <!-- Attention-pulse sweep: periodic clickability signal on interactive icons -->

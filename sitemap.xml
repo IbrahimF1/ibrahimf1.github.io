@@ -3,7 +3,7 @@
         xmlns:image="http://www.google.com/schemas/sitemap-image/1.1">
   <url>
     <loc>https://ibrahimf1.github.io/</loc>
-    <lastmod>2026-08-13</lastmod>
+    <lastmod>2026-08-14</lastmod>
     <changefreq>monthly</changefreq>
     <priority>1.0</priority>
     <image:image>
@@ -12,8 +12,20 @@
   </url>
   <url>
     <loc>https://ibrahimf1.github.io/diary.html</loc>
-    <lastmod>2026-08-13</lastmod>
+    <lastmod>2026-06-12</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.8</priority>
+  </url>
+  <url>
+    <loc>https://ibrahimf1.github.io/diary/entries/01-faceybuk-role-split.html</loc>
+    <lastmod>2026-06-12</lastmod>
+  </url>
+  <url>
+    <loc>https://ibrahimf1.github.io/diary/entries/02-scenesplat-3d-markers.html</loc>
+    <lastmod>2026-05-28</lastmod>
+  </url>
+  <url>
+    <loc>https://ibrahimf1.github.io/diary/entries/03-heat-aware-thresholds.html</loc>
+    <lastmod>2026-05-03</lastmod>
   </url>
 </urlset>

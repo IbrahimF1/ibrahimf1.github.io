@@ -38,13 +38,24 @@
         }
     }
 
+    // Cheap reading-time estimate from raw text — used for plate badges
+    // before the entry body has been fetched, then refined on first load.
+    function estimateReadingTime(text) {
+        const words = String(text || '').split(/\s+/).filter(Boolean);
+        if (!words.length) return '1 MIN READ';
+        return Math.max(1, Math.round(words.length / 200)) + ' MIN READ';
+    }
+
     const prefersReducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 
-    // ---- MARKDOWN PARSER (markdown-it) ----
+    // ---- MARKDOWN PARSER (markdown-it, injected on demand) ----
 
-    // Lazily-built singleton. Renderer rules add the diary-body__*
-    // classes so parsed Markdown is styled by the existing vocabulary.
+    // Lazily-built singleton. The vendor script itself is only injected on
+    // first reader open (see loadMarkdownIt) so initial page load stays lean.
+    // Renderer rules add the diary-body__* classes so parsed Markdown is
+    // styled by the existing vocabulary.
     let mdParser = null;
+    let mdLoadPromise = null;
 
     // Module-scope entry list + currently-open entry (deep linking & reader nav).
     let allEntries = [];
@@ -106,6 +117,37 @@
         return md;
     }
 
+    // Dynamically injects vendor/markdown-it.min.js and resolves with the
+    // parser singleton. The promise is cached so concurrent opens share a
+    // single request; a failed load clears the cache to allow a retry.
+    function loadMarkdownIt() {
+        if (typeof markdownit === 'function') return Promise.resolve(getMarkdownParser());
+        if (mdLoadPromise) return mdLoadPromise;
+
+        mdLoadPromise = new Promise((resolve, reject) => {
+            const script = document.createElement('script');
+            const timer = setTimeout(() => {
+                reject(new Error('Timed out loading vendor/markdown-it.min.js.'));
+            }, 8000);
+            script.onload = () => {
+                clearTimeout(timer);
+                if (typeof markdownit === 'function') resolve(getMarkdownParser());
+                else reject(new Error('markdown-it loaded but did not register.'));
+            };
+            script.onerror = () => {
+                clearTimeout(timer);
+                reject(new Error('Failed to load vendor/markdown-it.min.js.'));
+            };
+            script.src = 'vendor/markdown-it.min.js';
+            document.head.appendChild(script);
+        });
+
+        // Swallow this derived rejection (it only resets the cache slot).
+        mdLoadPromise.catch(() => { mdLoadPromise = null; });
+
+        return mdLoadPromise;
+    }
+
     // ---- ENTRY BODY LOADING (fetch + parse + cache, with error handling) ----
 
     const bodyCache = new Map();
@@ -115,20 +157,19 @@
         if (!path) return Promise.reject(new Error('No body file is referenced for this entry.'));
         if (bodyCache.has(path)) return Promise.resolve(bodyCache.get(path));
 
-        const md = getMarkdownParser();
-
         return fetch(path)
             .then(response => {
                 if (!response.ok) throw new Error(`Log file not found (HTTP ${response.status}).`);
                 return response.text();
             })
-            .then(markdown => {
-                let html;
-                if (md) {
-                    html = md.render(markdown);
-                } else {
-                    html = `<p class="diary-body__paragraph">${escapeText(markdown).replace(/\n{2,}/g, '</p><p class="diary-body__paragraph">')}</p>`;
-                }
+            .then(markdown => loadMarkdownIt()
+                .then(md => md.render(markdown))
+                .catch(() => (
+                    // Parser unavailable (vendor script blocked) — degrade to plain text.
+                    `<p class="diary-body__paragraph">${escapeText(markdown).replace(/\n{2,}/g, '</p><p class="diary-body__paragraph">')}</p>`
+                ))
+            )
+            .then(html => {
                 bodyCache.set(path, html);
                 return html;
             });
@@ -148,6 +189,15 @@
     }
 
     // ---- DOM GENERATION ----
+
+    // Reading-time badges on plates, keyed by entry index. Seeded from the
+    // summary word count, refined once the entry body has actually loaded.
+    const plateReadingTimes = new Map();
+
+    function updatePlateReadingTime(entry, html) {
+        const span = entry && plateReadingTimes.get(entry.index);
+        if (span) span.textContent = computeReadingTime(html);
+    }
 
     function generateHeader(page) {
         const header = document.getElementById('diaryHeader');
@@ -206,6 +256,11 @@
             text.appendChild(el('div', 'plate__tags', '<b>&#9612;TAGS</b>&nbsp;&nbsp;' + tagsHtml));
         }
         if (entry.body) {
+            const readingTime = el('span', 'plate__reading-time', estimateReadingTime(entry.summary));
+            plateReadingTimes.set(entry.index, readingTime);
+            text.appendChild(readingTime);
+        }
+        if (entry.body) {
             const open = document.createElement('button');
             open.type = 'button';
             open.className = 'plate__open';
@@ -245,10 +300,12 @@
         const entries = Array.isArray(diary.entries) ? diary.entries : [];
         allEntries = entries;
 
-        if (page.title) {
-            document.title = page.title;
+        if (page.title) document.title = page.title;
+        if (page.description) {
             const metaDesc = document.querySelector('meta[name="description"]');
-            if (metaDesc && page.description) metaDesc.content = page.description;
+            if (metaDesc) metaDesc.content = page.description;
+            const ogDesc = document.querySelector('meta[property="og:description"]');
+            if (ogDesc) ogDesc.content = page.description;
         }
 
         const bg = document.getElementById('diaryBgText');
@@ -329,6 +386,9 @@
         rt.style.display = 'none';
     }
 
+    // Element focus was on when the reader opened — restored on close.
+    let readerReturnFocus = null;
+
     function openReader(entry) {
         const reader = document.getElementById('diaryReader');
         const inner = document.getElementById('diaryReaderInner');
@@ -336,12 +396,20 @@
 
         currentEntry = entry;
 
+        // Only capture the origin on a cold open — neighbor flips shouldn't
+        // overwrite it with focus that already lives inside the reader.
+        if (!reader.classList.contains('is-open')) {
+            readerReturnFocus = document.activeElement;
+        }
+
         const idxEl = document.getElementById('diaryReaderIdx');
         const titleEl = document.getElementById('diaryReaderTitle');
         const dateEl = document.getElementById('diaryReaderDate');
         if (idxEl) idxEl.textContent = entry.index || '';
         if (titleEl) titleEl.textContent = entry.title || '';
         if (dateEl) dateEl.textContent = entry.date || '';
+
+        updateShareTargets(entry);
 
         const reveal = () => {
             reader.classList.add('is-open');
@@ -376,6 +444,7 @@
             .then(html => {
                 inner.innerHTML = html;
                 showReadingTime(html);
+                updatePlateReadingTime(entry, html);
             })
             .catch(err => {
                 console.error(`Failed to load diary entry body "${entry.body}":`, err);
@@ -398,6 +467,28 @@
         // Drop a deep-link fragment without adding a history entry.
         if (window.history && history.replaceState && entryFromHash(window.location.hash)) {
             history.replaceState(null, '', window.location.pathname + window.location.search);
+        }
+        // Hand focus back to whatever opened the reader, if it's still in the DOM.
+        if (readerReturnFocus && document.documentElement.contains(readerReturnFocus)) {
+            readerReturnFocus.focus();
+        }
+        readerReturnFocus = null;
+    }
+
+    // Keeps Tab / Shift+Tab inside the open reader (pairs with aria-modal).
+    function trapReaderTab(e, reader) {
+        const focusables = Array.from(
+            reader.querySelectorAll('button, a[href], input, select, textarea, [tabindex]:not([tabindex="-1"])')
+        ).filter(node => !node.disabled && !node.hidden && node.offsetParent !== null);
+        if (!focusables.length) { e.preventDefault(); return; }
+        const first = focusables[0];
+        const last = focusables[focusables.length - 1];
+        const active = document.activeElement;
+        if (e.shiftKey) {
+            if (active === first || !reader.contains(active)) { e.preventDefault(); last.focus(); }
+        } else if (active === last || !reader.contains(active)) {
+            e.preventDefault();
+            first.focus();
         }
     }
 
@@ -453,7 +544,152 @@
         apply(nextBtn, idx === -1 || idx >= allEntries.length - 1);
     }
 
+    // ---- SHARE (X intent / clipboard / native + toast) ----
+
+    // Absolute URL for the open entry — built from the current origin,
+    // falling back to the canonical GitHub Pages URL when that fails.
+    function buildEntryUrl(entry) {
+        let base = 'https://ibrahimf1.github.io/diary.html';
+        try {
+            if (window.location.origin && window.location.pathname) {
+                const dir = window.location.pathname.replace(/[^/]*$/, '');
+                base = new URL(dir + 'diary.html', window.location.origin).href;
+            }
+        } catch (e) {
+            // Unusual origin (e.g. file://) — keep the canonical fallback.
+        }
+        return entry && entry.index ? base + '#entry-' + encodeURIComponent(entry.index) : base;
+    }
+
+    // Pre-Clipboard-API fallback: hidden textarea + execCommand.
+    function legacyCopyText(text) {
+        try {
+            const ta = document.createElement('textarea');
+            ta.value = text;
+            ta.setAttribute('readonly', '');
+            ta.style.position = 'fixed';
+            ta.style.opacity = '0';
+            document.body.appendChild(ta);
+            ta.select();
+            const ok = document.execCommand('copy');
+            ta.remove();
+            return ok;
+        } catch (e) {
+            return false;
+        }
+    }
+
+    function copyEntryLink(url) {
+        const fallback = () => {
+            if (legacyCopyText(url)) showToast('LINK COPIED');
+            else showToast('COPY FAILED');
+        };
+        if (navigator.clipboard && navigator.clipboard.writeText) {
+            navigator.clipboard.writeText(url).then(() => showToast('LINK COPIED'), fallback);
+        } else {
+            fallback();
+        }
+    }
+
+    // Best-effort analytics — never lets a missing tracker break sharing.
+    function trackShare(entry) {
+        if (window.umami && typeof window.umami.track === 'function') {
+            window.umami.track('diary_share', { entry: (entry && entry.index) || '' });
+        }
+    }
+
+    // Points the X/Twitter intent link at the open entry.
+    function updateShareTargets(entry) {
+        const xLink = document.getElementById('diaryReaderShareX');
+        if (!xLink) return;
+        const title = entry && entry.title ? entry.title : '';
+        xLink.href = 'https://twitter.com/intent/tweet?text=' + encodeURIComponent(title) +
+            '&url=' + encodeURIComponent(buildEntryUrl(entry));
+    }
+
+    function initShare() {
+        const xLink = document.getElementById('diaryReaderShareX');
+        const copyBtn = document.getElementById('diaryReaderShareCopy');
+        const nativeBtn = document.getElementById('diaryReaderShareNative');
+
+        if (xLink) xLink.addEventListener('click', () => trackShare(currentEntry));
+
+        if (copyBtn) {
+            copyBtn.addEventListener('click', () => {
+                if (!currentEntry) return;
+                trackShare(currentEntry);
+                copyEntryLink(buildEntryUrl(currentEntry));
+            });
+        }
+
+        if (nativeBtn && navigator.share) {
+            nativeBtn.hidden = false;
+            nativeBtn.addEventListener('click', () => {
+                if (!currentEntry) return;
+                trackShare(currentEntry);
+                const shareData = { url: buildEntryUrl(currentEntry) };
+                if (currentEntry.title) shareData.title = currentEntry.title;
+                navigator.share(shareData).catch(() => { /* user cancelled */ });
+            });
+        }
+    }
+
+    // ---- SHARE TOAST ----
+
+    // Lazily-created confirmation toast (single aria-live region, reused).
+    let toastEl = null;
+    let toastTimer = 0;
+
+    function showToast(message) {
+        if (!toastEl) {
+            toastEl = el('div', 'diary-toast');
+            toastEl.setAttribute('role', 'status');
+            toastEl.setAttribute('aria-live', 'polite');
+            document.body.appendChild(toastEl);
+        }
+        toastEl.textContent = message;
+        toastEl.classList.add('is-visible');
+        clearTimeout(toastTimer);
+        toastTimer = setTimeout(() => toastEl.classList.remove('is-visible'), 2400);
+    }
+
+    // ---- TOUCH SWIPE (reader, prev/next) ----
+
+    // Horizontal swipe (>60px, |dx| > 2|dy|) on the reader's scroll container
+    // flips entries; vertical scrolling is untouched and swipes starting on
+    // links/buttons are ignored. Respects the prev/next list bounds.
+    function initSwipe(reader) {
+        const scroller = reader ? reader.querySelector('.reader__scroll') : null;
+        if (!scroller) return;
+
+        let startX = 0;
+        let startY = 0;
+        let onControl = false;
+
+        scroller.addEventListener('touchstart', (e) => {
+            const t = e.changedTouches[0];
+            startX = t.clientX;
+            startY = t.clientY;
+            onControl = !!(t.target && t.target.closest && t.target.closest('a, button'));
+        }, { passive: true });
+
+        scroller.addEventListener('touchend', (e) => {
+            const dx = e.changedTouches[0].clientX - startX;
+            const dy = e.changedTouches[0].clientY - startY;
+            startX = startY = 0;
+            const blocked = onControl;
+            onControl = false;
+            if (blocked) return;
+            if (Math.abs(dx) < 60 || Math.abs(dx) <= 2 * Math.abs(dy)) return;
+            const idx = currentEntry ? allEntries.indexOf(currentEntry) : -1;
+            if (idx === -1) return;
+            if (dx > 0 && idx > 0) openNeighbor(-1);
+            else if (dx < 0 && idx < allEntries.length - 1) openNeighbor(1);
+        }, { passive: true });
+    }
+
     function initReader() {
+        const reader = document.getElementById('diaryReader');
         const closeBtn = document.getElementById('diaryReaderClose');
         if (closeBtn) closeBtn.addEventListener('click', closeReader);
 
@@ -465,7 +701,8 @@
 
         document.addEventListener('keydown', (e) => {
             if (e.key === 'Escape') { closeReader(); return; }
-            if (!currentEntry) return;
+            if (!reader || !currentEntry) return;
+            if (e.key === 'Tab') { trapReaderTab(e, reader); return; }
             const t = e.target;
             const typing = t && (/^(input|textarea|select)$/i.test(t.tagName || '') || t.isContentEditable);
             if (typing) return;
@@ -473,13 +710,15 @@
             else if (e.key === 'ArrowRight') { e.preventDefault(); openNeighbor(1); }
         });
 
-        const reader = document.getElementById('diaryReader');
         if (reader) {
             reader.addEventListener('click', (e) => {
                 // Close only when clicking the overlay chrome, not the content.
                 if (e.target === reader) closeReader();
             });
         }
+
+        initSwipe(reader);
+        initShare();
 
         // React to fragment changes (RSS deep links) only while the reader is closed.
         window.addEventListener('hashchange', () => {
@@ -615,7 +854,7 @@
 
         if (prefersReducedMotion) {
             gsap.set('.diary-header > *', { autoAlpha: 1, y: 0 });
-            gsap.set('.plate__index, .plate__label, .plate__title, .plate__summary, .plate__tags, .plate__open, .plate__media, .plate__date', { autoAlpha: 1, y: 0 });
+            gsap.set('.plate__index, .plate__label, .plate__title, .plate__summary, .plate__tags, .plate__reading-time, .plate__open, .plate__media, .plate__date', { autoAlpha: 1, y: 0 });
             return;
         }
 
@@ -630,7 +869,7 @@
 
         gsap.utils.toArray('.plate').forEach(plate => {
             const kids = plate.querySelectorAll(
-                '.plate__index, .plate__date, .plate__label, .plate__title, .plate__summary, .plate__tags, .plate__open, .plate__media'
+                '.plate__index, .plate__date, .plate__label, .plate__title, .plate__summary, .plate__tags, .plate__reading-time, .plate__open, .plate__media'
             );
             gsap.set(kids, { autoAlpha: 0, y: 44 });
             ScrollTrigger.create({
@@ -676,6 +915,23 @@
         else generateInitialsFavicon(name, opts);
     }
 
+    // ---- IDLE PREFETCH ----
+
+    // Warms the HTTP cache for the first entry's body once the page is idle,
+    // so the likely-first reader open is instant. Best-effort — errors
+    // are swallowed and nothing is parsed here.
+    function prefetchFirstEntryOnIdle() {
+        const whenIdle = window.requestIdleCallback
+            ? window.requestIdleCallback.bind(window)
+            : (cb) => setTimeout(cb, 2500);
+        whenIdle(() => {
+            const first = allEntries[0];
+            if (first && first.body && !bodyCache.has(first.body)) {
+                fetch(first.body, { cache: 'default' }).catch(() => {});
+            }
+        });
+    }
+
     // ---- BOOTSTRAP ----
 
     (function bootstrap() {
@@ -695,6 +951,7 @@
                 initScrollSpy(count);
                 initAnimations();
                 openEntryFromHash(window.location.hash);
+                prefetchFirstEntryOnIdle();
             })
             .catch(err => {
                 console.error('Dev Diary bootstrap failed:', err);
@@ -703,7 +960,7 @@
                         padding:120px 30px 60px;text-align:center;">
                         <div>
                             <p style="font-size:11px;letter-spacing:0.3em;text-transform:uppercase;margin-bottom:10px;color:#b5a898;">SYS::ERROR</p>
-                            <p style="color:#827a70;font-size:13px;">Failed to load diary/diary.yaml — ${err.message}</p>
+                            <p style="color:#827a70;font-size:13px;">Failed to load diary/diary.yaml — ${escapeText(err.message || 'Unknown error')}</p>
                             <p style="margin-top:24px;"><a href="index.html" style="color:#b5a898;text-decoration:none;letter-spacing:0.2em;text-transform:uppercase;font-size:11px;">[&larr; RETURN HOME]</a></p>
                         </div>
                     </div>

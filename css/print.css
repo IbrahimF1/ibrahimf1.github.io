@@ -73,6 +73,8 @@
     .marquee { overflow: visible !important; white-space: normal !important; border-color: #ccc !important; }
     .marquee-track { animation: none !important; transform: none !important; display: block !important; white-space: normal !important; }
     .marquee-item { display: inline !important; color: #111 !important; padding: 0 6pt 0 0 !important; }
+    /* Duplicated marquee spans (data-dup) would print the band twice. */
+    .marquee-track [data-dup] { display: none !important; }
 
     /* Typography falls back to a printer-friendly serif/mono mix. */
     .hero-name,

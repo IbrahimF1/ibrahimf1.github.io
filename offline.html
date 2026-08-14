@@ -1,0 +1,87 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+    <meta name="theme-color" content="#0a0a0a">
+    <meta name="robots" content="noindex">
+    <title>OFFLINE — Ibrahim Faruquee</title>
+    <style>
+        :root {
+            --bg: #0a0a0a;
+            --fg: #c8c2b8;
+            --highlight: #e8c98c;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: var(--bg);
+            color: var(--fg);
+            font-family: 'Space Mono', 'Courier New', Courier, monospace;
+            text-align: center;
+            padding: 24px;
+        }
+
+        main {
+            max-width: 34rem;
+        }
+
+        h1 {
+            color: var(--highlight);
+            font-size: clamp(1.1rem, 4vw, 1.6rem);
+            font-weight: 700;
+            letter-spacing: .08em;
+        }
+
+        p {
+            margin-top: 1.2rem;
+            font-size: .9rem;
+            line-height: 1.6;
+        }
+
+        .retry {
+            display: inline-block;
+            margin-top: 1.6rem;
+            padding: .65rem 1.6rem;
+            border: 1px solid var(--highlight);
+            color: var(--highlight);
+            text-decoration: none;
+            font-size: .85rem;
+            letter-spacing: .15em;
+        }
+
+        .retry:hover,
+        .retry:focus {
+            background: var(--highlight);
+            color: var(--bg);
+        }
+
+        small {
+            display: block;
+            margin-top: 1.8rem;
+            font-size: .75rem;
+            opacity: .6;
+        }
+    </style>
+</head>
+
+<body>
+    <main>
+        <h1>SIGNAL::LOST — OFFLINE</h1>
+        <p>The transmission cannot reach you without a network connection.</p>
+        <a class="retry" href="/">RETRY ↻</a>
+        <small>Previously visited pages remain available via your browser's back button.</small>
+    </main>
+</body>
+
+</html>

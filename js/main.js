@@ -17,16 +17,42 @@ function parseSVG(svgString) {
     return document.adoptNode(doc.documentElement);
 }
 
+// ---- ESCAPING / SAFE URLS ----
+// data.yaml is untrusted input funnelled into innerHTML template literals;
+// esc() keeps hostile (or merely ampersand-y) content from breaking out of
+// markup, and safeUrl() confines href/src values to an allow-list of schemes.
+const ESC_MAP = { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' };
+const esc = (str) => String(str).replace(/[&<>"']/g, (ch) => ESC_MAP[ch]);
+
+const safeUrl = (url) => {
+    const u = String(url == null ? '' : url).trim();
+    if (u === '') return '#';
+    if (u.startsWith('#')) return u;
+    if (/^(https?|mailto|tel):/i.test(u)) return u;
+    if (u.startsWith('//') || /^[a-z][a-z0-9+.-]*:/i.test(u)) return '#';  // protocol-relative / any other scheme
+    return u;  // plain relative path (pages, assets)
+};
+
+// ---- STORAGE GUARD ----
+// localStorage throws when cookies/storage are blocked (private-mode Safari,
+// strict Firefox) — the startup flow must never die on an access error.
+const safeStorageGet = (key) => {
+    try { return localStorage.getItem(key); } catch (_) { return null; }
+};
+const safeStorageSet = (key, value) => {
+    try { localStorage.setItem(key, value); } catch (_) { /* no-op */ }
+};
+
 // ---- SHARED: SECTION HEAD BUILDER ----
 function buildSectionHead({ num, eyebrow, lines, goldLast, dither = true }) {
-    const titleHtml = lines.map((ln, i) => {
+    const titleHtml = (lines || []).map((ln, i) => {
         const gold = (goldLast && i === lines.length - 1) ? ' gold' : '';
-        return `<span class="${gold.trim()}">${ln}</span>`;
+        return `<span class="${gold.trim()}">${esc(ln)}</span>`;
     }).join('<br>');
     const ditherHtml = dither ? `<div class="section-dither" aria-hidden="true"></div>` : '';
     return `
-        <span class="section-num">${num}</span>
-        <div class="section-head__meta"><span class="section-eyebrow">${eyebrow}</span></div>
+        <span class="section-num">${esc(num)}</span>
+        <div class="section-head__meta"><span class="section-eyebrow">${esc(eyebrow)}</span></div>
         <div class="section-rule"></div>
         <div class="section-titlerow">
             <h2 class="section-title">${titleHtml}</h2>
@@ -66,8 +92,8 @@ function generateHero(data) {
     // Name lines
     const nameEl = document.getElementById('heroName');
     nameEl.innerHTML = `
-        <span class="line line--solid">${hero.name.line1}</span>
-        <span class="line line--stroke">${hero.name.line2}</span>
+        <span class="line line--solid">${esc(hero.name.line1)}</span>
+        <span class="line line--stroke">${esc(hero.name.line2)}</span>
     `;
 
     // Role
@@ -85,8 +111,8 @@ function generateHero(data) {
         const stat = document.createElement('div');
         stat.className = 'hero-stat';
         stat.innerHTML = `
-            <div class="hero-stat-num" data-count="${s.value}" data-suffix="${s.suffix || ''}">0</div>
-            <div class="hero-stat-label">${s.label}</div>
+            <div class="hero-stat-num" data-count="${esc(s.value)}" data-suffix="${esc(s.suffix || '')}">0</div>
+            <div class="hero-stat-label">${esc(s.label)}</div>
         `;
         statsEl.appendChild(stat);
     });
@@ -99,7 +125,7 @@ function generateHero(data) {
         if (!SVG_ICONS[s.platform]) return;
         const link = document.createElement('a');
         link.className = 'hero-social-link';
-        link.href = s.url;
+        link.href = safeUrl(s.url);
         link.target = '_blank';
         link.rel = 'noopener noreferrer';
         const icon = document.createElement('div');
@@ -126,16 +152,18 @@ function generateMarquee(data) {
     const sep = data.marquee.separator || '✦';
 
     // Build the track content once, then duplicate for a seamless -50% loop.
-    function buildSequence() {
+    // Spans in the duplicated sequence carry data-dup so print/AT styles can
+    // collapse them (they are a visual loop artifact, not extra content).
+    function buildSequence(dup) {
         return items.map(t =>
-            `<span class="marquee-item">${t}</span><span class="marquee-sep">${sep}</span>`
+            `<span class="marquee-item"${dup ? ' data-dup' : ''}>${esc(t)}</span><span class="marquee-sep"${dup ? ' data-dup' : ''}>${esc(sep)}</span>`
         ).join('');
     }
-    const sequence = buildSequence();
+    const sequence = buildSequence(false);
 
     ['marqueeTrack1', 'marqueeTrack2'].forEach(id => {
         const track = document.getElementById(id);
-        if (track) track.innerHTML = sequence + sequence;
+        if (track) track.innerHTML = sequence + buildSequence(true);
     });
 }
 
@@ -158,15 +186,15 @@ function generateAbout(data) {
     intro.className = 'about-cell about-cell--statement';
     intro.style.setProperty('--intro-rows', cellCount);
     intro.innerHTML = `
-        <span class="cell-label">${about.eyebrow} — BIO</span>
+        <span class="cell-label">${esc(about.eyebrow)} — BIO</span>
         <div class="about-intro-body">
-            <p class="about-body">${about.body}</p>
-            <p class="about-body about-body--sec">${about.body_secondary}</p>
+            <p class="about-body">${esc(about.body)}</p>
+            <p class="about-body about-body--sec">${esc(about.body_secondary)}</p>
         </div>
         ${about.cta && about.cta.href ? `
-            <a class="about-cta" href="${about.cta.href}" data-cursor="link">
+            <a class="about-cta" href="${safeUrl(about.cta.href)}" data-cursor="link">
                 <span class="about-cta__prompt">&gt;</span>
-                <span>${about.cta.label}</span>
+                <span>${esc(about.cta.label)}</span>
                 <span class="about-cta__arrow">&rarr;</span>
             </a>` : ''}
     `;
@@ -178,8 +206,8 @@ function generateAbout(data) {
         const hi = c.highlight ? ' about-cell--highlight' : '';
         cell.className = `about-cell about-cell--auto${hi}`;
         cell.innerHTML = `
-            <span class="cell-label">${c.label}</span>
-            <span class="cell-value">${c.value}</span>
+            <span class="cell-label">${esc(c.label)}</span>
+            <span class="cell-value">${esc(c.value)}</span>
             <span class="about-cell__index">0${i + 1}</span>
         `;
         grid.appendChild(cell);
@@ -267,13 +295,12 @@ function generateProjects(data) {
     (projects.items || []).forEach(p => {
         const tile = document.createElement('a');
         tile.className = `projects-tile projects-tile--${p.span || 'auto'}`;
-        tile.href = p.repo_url || '#';
+        tile.href = safeUrl(p.repo_url);
         tile.target = '_blank';
         tile.rel = 'noopener noreferrer';
-        tile.setAttribute('aria-label', p.title);
 
         tile.dataset.fullDesc = p.description || '';
-        const tagsHtml = (p.tags || []).map(t => `<span class="projects-tag">${t}</span>`).join('');
+        const tagsHtml = (p.tags || []).map(t => `<span class="projects-tag">${esc(t)}</span>`).join('');
         const descHtml = `<p class="projects-tile__desc"></p>`;
         const repoHtml = p.repo_url
             ? `<span class="projects-tile__repo project-card-repo" aria-label="View source on GitHub">${SVG_ICONS.github_outlined}</span>`
@@ -283,12 +310,12 @@ function generateProjects(data) {
         // WebP source and a raster fallback. Images/videos stay lazy.
         const mediaHtml = p.video
             ? `<video class="projects-tile__video" muted loop playsinline preload="none"
-                 poster="${p.video.poster || p.image || ''}" aria-label="${p.image_alt || p.title || ''}">
-                 <source src="${p.video.webm}" type="video/webm">
-                 <source src="${p.video.mp4}" type="video/mp4">
+                 poster="${esc(p.video.poster || p.image || '')}" aria-label="${esc(p.image_alt || p.title || '')}">
+                 <source src="${esc(p.video.webm)}" type="video/webm">
+                 <source src="${esc(p.video.mp4)}" type="video/mp4">
                </video>`
-            : `<picture>${p.image_webp ? `<source srcset="${p.image_webp}" type="image/webp">` : ''}
-                 <img src="${p.image}" alt="${p.image_alt || ''}" loading="lazy" decoding="async">
+            : `<picture>${p.image_webp ? `<source srcset="${esc(p.image_webp)}" type="image/webp">` : ''}
+                 <img src="${esc(p.image)}" alt="${esc(p.image_alt || '')}" loading="lazy" decoding="async">
                </picture>`;
 
         tile.innerHTML = `
@@ -298,13 +325,13 @@ function generateProjects(data) {
             <div class="projects-tile__scrim"></div>
             <div class="projects-tile__body">
                 <div class="projects-tile__top">
-                    <span class="projects-tile__num">${p.index}</span>
-                    ${p.award ? `<span class="projects-tile__award">${p.award}</span>` : ''}
+                    <span class="projects-tile__num">${esc(p.index)}</span>
+                    ${p.award ? `<span class="projects-tile__award">${esc(p.award)}</span>` : ''}
                 </div>
                 <div class="projects-tile__foot">
                     <div class="projects-tile__tags">${tagsHtml}</div>
                     ${descHtml}
-                    <h3 class="projects-tile__title">${p.title}</h3>
+                    <h3 class="projects-tile__title">${esc(p.title)}</h3>
                 </div>
             </div>
             ${repoHtml}
@@ -354,19 +381,51 @@ function generateExperience(data) {
     (experience.items || []).forEach(item => {
         const row = document.createElement('div');
         row.className = 'experience-row';
-        const tagsHtml = (item.tags || []).map(t => `<span class="experience-tag">${t}</span>`).join('');
+        const tagsHtml = (item.tags || []).map(t => `<span class="experience-tag">${esc(t)}</span>`).join('');
         row.innerHTML = `
-            <div class="experience-row__index">${item.index}</div>
-            <div class="experience-row__period">${item.period}</div>
+            <div class="experience-row__index">${esc(item.index)}</div>
+            <div class="experience-row__period">${esc(item.period)}</div>
             <div class="experience-row__role">
-                <span class="ttl">${item.title}</span>
-                <span class="co">${item.company}</span>
+                <span class="ttl">${esc(item.title)}</span>
+                <span class="co">${esc(item.company)}</span>
             </div>
-            <div class="experience-row__desc">${item.description}</div>
+            <div class="experience-row__desc">${esc(item.description)}</div>
             <div class="experience-row__tags">${tagsHtml}</div>
         `;
         list.appendChild(row);
     });
+}
+
+// ---- CLIPBOARD ----
+// Async Clipboard API when available; legacy textarea + execCommand fallback
+// for non-secure contexts where navigator.clipboard is missing/blocked.
+function fallbackCopyText(text) {
+    try {
+        const ta = document.createElement('textarea');
+        ta.value = text;
+        ta.setAttribute('readonly', '');
+        ta.style.position = 'fixed';
+        ta.style.top = '0';
+        ta.style.left = '-9999px';
+        document.body.appendChild(ta);
+        ta.select();
+        const ok = document.execCommand('copy');
+        ta.remove();
+        return ok;
+    } catch (_) {
+        return false;
+    }
+}
+
+function copyText(text, done) {
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+        navigator.clipboard.writeText(text).then(
+            () => done(true),
+            () => done(fallbackCopyText(text))
+        );
+    } else {
+        done(fallbackCopyText(text));
+    }
 }
 
 function generateContact(data) {
@@ -393,15 +452,41 @@ function generateContact(data) {
     (contact.links || []).forEach(link => {
         const tile = document.createElement('a');
         tile.className = 'contact-tile';
-        tile.href = link.url;
-        tile.target = link.url.startsWith('http') ? '_blank' : '';
+        tile.href = safeUrl(link.url);
+        tile.target = String(link.url || '').startsWith('http') ? '_blank' : '';
         tile.rel = 'noopener noreferrer';
         tile.setAttribute('aria-label', link.label);
         tile.innerHTML = `
-            <span class="contact-tile__label">${link.label}</span>
-            <span class="contact-tile__value">${link.value}</span>
+            <span class="contact-tile__label">${esc(link.label)}</span>
+            <span class="contact-tile__value">${esc(link.value)}</span>
             <span class="contact-tile__arrow">&rarr;</span>
         `;
+
+        // mailto: tiles get a small COPY button inline with the value — copy
+        // the address without opening a mail client. Lives inside the value
+        // span so the tile's flex layout is untouched (arrow is absolute).
+        if (String(link.url || '').indexOf('mailto:') === 0) {
+            const valueEl = tile.querySelector('.contact-tile__value');
+            const copy = document.createElement('button');
+            copy.type = 'button';
+            copy.className = 'contact-tile__copy';
+            copy.setAttribute('aria-label', 'Copy email address');
+            copy.textContent = 'COPY ⧉';
+            copy.style.cssText = 'display:inline-block;vertical-align:middle;margin-left:12px;' +
+                'padding:3px 8px;background:none;border:1px solid currentColor;border-radius:0;' +
+                'color:inherit;font-family:var(--font-mono, monospace);font-size:10px;' +
+                'letter-spacing:0.18em;cursor:pointer;opacity:0.7;';
+            copy.addEventListener('click', (e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                copyText(String(link.value || '').trim(), (ok) => {
+                    if (!ok) return;
+                    showToast('EMAIL COPIED TO CLIPBOARD');
+                    if (window.umami && window.umami.track) window.umami.track('copy_email');
+                });
+            });
+            if (valueEl) valueEl.appendChild(copy);
+        }
         grid.appendChild(tile);
     });
 
@@ -421,6 +506,9 @@ function initCursor() {
     // custom cursor entirely. Throwing here would abort bootstrap before the
     // startup overlay is removed, leaving a blank page. (Mirrors diary.js.)
     if (typeof gsap === 'undefined' || typeof ScrollTrigger === 'undefined' || typeof ScrollToPlugin === 'undefined') return;
+    // Reduced motion: skip the custom cursor entirely (html.js-cursor-ready is
+    // only added below, so the native cursor simply stays).
+    if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
     gsap.registerPlugin(ScrollTrigger, ScrollToPlugin);
     const isTouch = window.matchMedia('(hover: none), (pointer: coarse)').matches;
     const dot = document.querySelector('.cursor-dot');
@@ -437,34 +525,54 @@ function initCursor() {
     const rx = gsap.quickTo(ring, 'x', { duration: 0.35, ease: 'power2.out' });
     const ry = gsap.quickTo(ring, 'y', { duration: 0.35, ease: 'power2.out' });
 
-    document.addEventListener('mousemove', (e) => {
+    // rAF gate: mousemove only records the latest coords; a single rAF per
+    // frame feeds them to the quickTo tweens, so a burst of mouse events
+    // between frames costs one callback instead of N.
+    let mx = 0, my = 0, rafPending = false;
+    const flush = () => {
+        rafPending = false;
         if (!revealed) {
             revealed = true;
-            gsap.set(dot, { x: e.clientX, y: e.clientY, opacity: 1 });
-            gsap.set(ring, { x: e.clientX, y: e.clientY, opacity: 1 });
+            gsap.set(dot, { x: mx, y: my, opacity: 1 });
+            gsap.set(ring, { x: mx, y: my, opacity: 1 });
             return;
         }
-        dx(e.clientX); dy(e.clientY); rx(e.clientX); ry(e.clientY);
-    });
+        dx(mx); dy(my); rx(mx); ry(my);
+    };
+    document.addEventListener('mousemove', (e) => {
+        mx = e.clientX; my = e.clientY;
+        if (!rafPending) { rafPending = true; requestAnimationFrame(flush); }
+    }, { passive: true });
 }
 
 // ---- STAT COUNTERS (odometer-style count-up) ----
 function animateCounters() {
     // Robust against a blocked GSAP CDN: render the final value directly so the
     // stat bar is never stuck at 0 even when the count-up tween can't run.
-    const html = (v, suffix) => Math.round(v) + (suffix ? `<span class="suffix">${suffix}</span>` : '');
     const hasGsap = typeof gsap !== 'undefined';
     document.querySelectorAll('.hero-stat-num').forEach(el => {
         const to = parseInt(el.dataset.count, 10) || 0;
         const suffix = el.dataset.suffix || '';
-        if (!to || !hasGsap) { el.innerHTML = html(to, suffix); return; }
+        // Build the number text node + suffix span once (same final DOM shape
+        // the old innerHTML produced), then touch only the text node per frame —
+        // no HTML re-parse in onUpdate.
+        el.textContent = '';
+        const num = document.createTextNode('0');
+        el.appendChild(num);
+        if (suffix) {
+            const suf = document.createElement('span');
+            suf.className = 'suffix';
+            suf.textContent = suffix;
+            el.appendChild(suf);
+        }
+        if (!to || !hasGsap) { num.nodeValue = String(Math.round(to)); return; }
         const obj = { v: 0 };
         gsap.to(obj, {
             v: to,
             duration: 1.8,
             ease: 'power3.out',
             onUpdate: () => {
-                el.innerHTML = html(obj.v, suffix);
+                num.nodeValue = String(Math.round(obj.v));
             }
         });
     });
@@ -483,18 +591,30 @@ function initNavClock() {
         } catch (_) { el.textContent = 'NYC'; }
     }
     tick();
-    setInterval(tick, 30000);
+    // Pause the 30s tick while the tab is hidden (no timer churn in background
+    // tabs); re-tick immediately on becoming visible so a stale time never
+    // lingers after returning to the tab.
+    let clockTimer = setInterval(tick, 30000);
+    document.addEventListener('visibilitychange', () => {
+        if (document.hidden) {
+            clearInterval(clockTimer);
+            clockTimer = null;
+        } else {
+            tick();
+            if (!clockTimer) clockTimer = setInterval(tick, 30000);
+        }
+    });
 }
 
 // ---- STARTUP ANIMATION ----
 function playStartupAnimation() {
     const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
     const overlay = document.getElementById('startupOverlay');
-    const hasVisited = localStorage.getItem('portfolio_visited') === 'true';
+    const hasVisited = safeStorageGet('portfolio_visited') === 'true';
 
     if (reduceMotion || hasVisited) {
         if (overlay) overlay.remove();
-        if (!hasVisited) localStorage.setItem('portfolio_visited', 'true');
+        if (!hasVisited) safeStorageSet('portfolio_visited', 'true');
         animateCounters();
         return Promise.resolve();
     }
@@ -524,7 +644,7 @@ function playStartupAnimation() {
             } catch (_) {}
             document.documentElement.style.overflow = '';
             document.body.style.overflow = '';
-            localStorage.setItem('portfolio_visited', 'true');
+            safeStorageSet('portfolio_visited', 'true');
             if (overlay) overlay.remove();
             resolve();
         };
@@ -567,11 +687,15 @@ function initAnimations(data) {
     // Cursor hover targets
     if (!isTouch && dot && ring) {
         document.querySelectorAll('a, button, .projects-tile, .contact-tile, .experience-row, .about-cell').forEach(el => {
+            // Grow via transform scale (compositor-only) instead of a
+            // width/height tween (layout): the ring keeps its CSS base 40px
+            // box; borderWidth eases 1 → 0.63 in the same tween so the
+            // hairline still renders ~1px once scaled by 1.6 (0.63 × 1.6 ≈ 1).
             el.addEventListener('mouseenter', () => {
-                gsap.to(ring, { width: 64, height: 64, borderColor: '#f2eee7', duration: 0.2, ease: 'power2.out' });
+                gsap.to(ring, { scale: 1.6, borderWidth: 0.63, borderColor: '#f2eee7', duration: 0.2, ease: 'power2.out' });
             });
             el.addEventListener('mouseleave', () => {
-                gsap.to(ring, { width: 40, height: 40, borderColor: '#827a70', duration: 0.2, ease: 'power2.out' });
+                gsap.to(ring, { scale: 1, borderWidth: 1, borderColor: '#827a70', duration: 0.2, ease: 'power2.out' });
             });
         });
     }
@@ -579,7 +703,8 @@ function initAnimations(data) {
     // ---- HAMBURGER ----
     const hamburger = document.querySelector('.nav-hamburger');
     const mobileMenu = document.querySelector('.mobile-menu');
-    const mobileLinks = Array.from(document.querySelectorAll('.mobile-menu-link'));
+    const mobileLinks = Array.from(document.querySelectorAll('.mobile-menu-inner a, .mobile-menu-inner button'));
+    const firstMenuLink = document.querySelector('.mobile-menu-link');
     let menuLastFocused = null;
 
     function setMenu(open) {
@@ -592,7 +717,7 @@ function initAnimations(data) {
         document.body.style.overflow = open ? 'hidden' : '';
         if (open) {
             menuLastFocused = document.activeElement;
-            requestAnimationFrame(() => mobileLinks[0] && mobileLinks[0].focus());
+            requestAnimationFrame(() => firstMenuLink && firstMenuLink.focus());
         } else if (wasOpen && menuLastFocused && menuLastFocused.focus) {
             menuLastFocused.focus();
         }
@@ -964,13 +1089,28 @@ function initKeyboardNav(data) {
 
 // ---- BOOTSTRAP ----
 (function bootstrap() {
-    fetch('data.yaml')
+    // Hard 10s timeout when AbortSignal.timeout is available so a hung network
+    // fails fast into the recoverable error panel instead of hanging blank.
+    const fetchOpts = (typeof AbortSignal !== 'undefined' && typeof AbortSignal.timeout === 'function')
+        ? { signal: AbortSignal.timeout(10000) }
+        : {};
+    fetch('data.yaml', fetchOpts)
         .then(r => {
             if (!r.ok) throw new Error(`Failed to load data.yaml: ${r.status}`);
             return r.text();
         })
         .then(yamlText => {
+            // Name the real cause when the vendored parser itself never loaded
+            // (blocked/missing vendor/js-yaml.min.js) — otherwise the panel
+            // would show a bare "jsyaml is not defined" ReferenceError.
+            if (typeof jsyaml === 'undefined') throw new Error('YAML parser failed to load (vendor/js-yaml.min.js)');
             const data = jsyaml.load(yamlText);
+
+            // Shape guards: fail with a precise message naming what's missing,
+            // instead of a raw TypeError from deeper inside a generator.
+            if (!data) throw new Error('data.yaml parsed to an empty document');
+            if (!data.nav) throw new Error('data.yaml: missing required "nav" list');
+            if (!data.hero) throw new Error('data.yaml: missing required "hero" map');
 
             if (data.site) {
                 document.title = data.site.title || document.title;
@@ -1016,13 +1156,25 @@ function initKeyboardNav(data) {
         })
         .catch(err => {
             console.error('Portfolio bootstrap failed:', err);
+            const msg = esc(err && err.message ? err.message : String(err));
             document.body.innerHTML = `
                 <div style="display:flex;align-items:center;justify-content:center;height:100vh;
                     background:#0a0a0a;color:#c8c2b8;font-family:monospace;text-align:center;padding:20px;">
                     <div>
                         <p style="font-size:11px;letter-spacing:0.3em;text-transform:uppercase;margin-bottom:10px;">SYS::ERROR</p>
-                        <p style="color:#827a70;font-size:13px;">Failed to load data.yaml — ${err.message}</p>
+                        <p style="color:#827a70;font-size:13px;">Failed to load data.yaml — ${msg}</p>
+                        <p style="margin-top:18px;">
+                            <button type="button" id="bootRetry" style="background:none;border:1px solid #827a70;color:#c8c2b8;
+                                font-family:monospace;font-size:11px;letter-spacing:0.2em;text-transform:uppercase;
+                                padding:8px 16px;cursor:pointer;">RETRY ↻</button><a
+                                href="mailto:ifaruquee1@gmail.com?subject=Portfolio%20load%20error"
+                                style="display:inline-block;border:1px solid #827a70;color:#827a70;text-decoration:none;
+                                font-family:monospace;font-size:11px;letter-spacing:0.2em;text-transform:uppercase;
+                                padding:8px 16px;margin-left:8px;">REPORT</a>
+                        </p>
                     </div>
                 </div>`;
+            const retry = document.getElementById('bootRetry');
+            if (retry) retry.addEventListener('click', () => location.reload());
         });
 })();

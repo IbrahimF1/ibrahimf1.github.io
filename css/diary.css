@@ -245,6 +245,26 @@
     font-weight: 400;
 }
 
+/* Reading-time badge — plate meta like the tags row; seeded from the
+   summary, refined once the entry body has actually been loaded */
+.plate__reading-time {
+    display: inline-block;
+    align-self: flex-start;
+    font-family: var(--font-mono);
+    font-size: 10px;
+    letter-spacing: 0.25em;
+    text-transform: uppercase;
+    color: var(--fg-dim);
+    font-variant-numeric: tabular-nums;
+    margin-bottom: 30px;
+    border-top: 1px solid var(--border);
+    padding-top: 10px;
+}
+.plate__reading-time::before {
+    content: '≈ ';
+    color: var(--accent-bright);
+}
+
 .plate__open {
     align-self: flex-start;
     background: none;
@@ -538,6 +558,36 @@
 @media (max-width: 600px) {
     .reader__nav-btn { padding: 9px 10px; letter-spacing: 0.12em; }
 }
+/* Share cluster — X intent / copy link / native share */
+.reader__share {
+    display: flex;
+    gap: 8px;
+    flex-shrink: 0;
+}
+.reader__share-btn {
+    background: none;
+    border: 1px solid var(--border-bright);
+    color: var(--fg);
+    padding: 9px 12px;
+    cursor: none;
+    font-family: var(--font-mono);
+    font-size: 10px;
+    letter-spacing: 0.2em;
+    text-transform: uppercase;
+    text-decoration: none;
+    white-space: nowrap;
+    transition: color var(--transition-raw), border-color var(--transition-raw);
+    flex-shrink: 0;
+}
+.reader__share-btn:hover,
+.reader__share-btn:focus-visible {
+    color: var(--highlight);
+    border-color: var(--highlight);
+}
+.reader__share-btn:focus-visible {
+    outline: 2px solid var(--highlight);
+    outline-offset: 2px;
+}
 .reader__scroll {
     flex: 1;
     overflow-y: auto;
@@ -712,6 +762,34 @@
     font-style: italic;
 }
 
+/* ---- SHARE TOAST ---- */
+.diary-toast {
+    position: fixed;
+    left: 50%;
+    bottom: 64px;
+    transform: translate(-50%, 8px);
+    z-index: 2500;
+    padding: 10px 16px;
+    background: var(--bg-elevated);
+    border: 1px solid var(--border-bright);
+    color: var(--highlight);
+    font-family: var(--font-mono);
+    font-size: 10px;
+    letter-spacing: 0.3em;
+    text-transform: uppercase;
+    white-space: nowrap;
+    opacity: 0;
+    visibility: hidden;
+    pointer-events: none;
+    transition: opacity 0.2s ease, transform 0.2s ease, visibility 0s linear 0.2s;
+}
+.diary-toast.is-visible {
+    opacity: 1;
+    visibility: visible;
+    transform: translate(-50%, 0);
+    transition: opacity 0.2s ease, transform 0.2s ease, visibility 0s;
+}
+
 /* ---- FOOTER ---- */
 .diary-footer {
     position: relative;
@@ -795,6 +873,16 @@
     }
 }
 
+/* Mobile reader bar — icon-only prev/next, labels stay in the DOM
+   (and in aria-labels) but their visual spans collapse */
+@media (max-width: 480px) {
+    .reader__bar { flex-wrap: wrap; row-gap: 10px; }
+    .reader__nav-label { display: none; }
+    .reader__nav-btn { padding: 9px 10px; }
+    .reader__share-btn { padding: 9px 8px; letter-spacing: 0.12em; }
+    .diary-toast { bottom: 54px; }
+}
+
 /* Respect reduced motion — kill the decorative loops and slides */
 @media (prefers-reduced-motion: reduce) {
     .plate__open::after,
@@ -807,6 +895,11 @@
     .plate__title.is-openable,
     .plate__open,
     .reader { transition: none; }
+
+    .diary-toast {
+        transition: none;
+        transform: translate(-50%, 0);
+    }
 
     .reader { transform: none; }
     .reader:not(.is-open) { display: none; }

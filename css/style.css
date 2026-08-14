@@ -277,8 +277,8 @@ a:hover { color: var(--highlight); }
     height: 56px;
     z-index: 1000;
     background: rgba(10, 10, 10, 0.7);
-    backdrop-filter: blur(14px) saturate(1.2);
-    -webkit-backdrop-filter: blur(14px) saturate(1.2);
+    backdrop-filter: blur(10px) saturate(1.1);
+    -webkit-backdrop-filter: blur(10px) saturate(1.1);
     border-bottom: 1px solid var(--border);
     font-size: 11px;
     letter-spacing: 0.12em;
@@ -365,6 +365,9 @@ a:hover { color: var(--highlight); }
     position: relative;
     z-index: 2;
 }
+
+/* Anchor landings: clear the fixed 56px nav (plus a 16px breath) on jump. */
+.section[id] { scroll-margin-top: 72px; }
 
 /* Hairline-grid container pattern: top+left borders on parent,
    right+bottom on each cell → uniform 1px specimen lines. */
@@ -736,7 +739,7 @@ a:hover { color: var(--highlight); }
 }
 
 .hero-stat-label {
-    font-size: 9px;
+    font-size: 10px;
     letter-spacing: 0.18em;
     color: var(--fg-dim);
     text-transform: uppercase;
@@ -833,7 +836,7 @@ a:hover { color: var(--highlight); }
 .about-cell--highlight {
     background: var(--highlight);
 }
-.about-cell--highlight .cell-label { color: rgba(10,10,10,0.6); }
+.about-cell--highlight .cell-label { color: rgba(10,10,10,0.75); }
 .about-cell--highlight .cell-value { color: var(--bg); }
 .about-cell--highlight:hover { background: var(--highlight); }
 
@@ -947,7 +950,8 @@ a:hover { color: var(--highlight); }
     will-change: transform, filter;
 }
 
-.projects-tile:hover .projects-tile__media video {
+.projects-tile:hover .projects-tile__media video,
+.projects-tile:focus-visible .projects-tile__media video {
     filter: grayscale(85%) contrast(1.05) brightness(0.55);
     transform: scale(1.04);
 }
@@ -1064,7 +1068,7 @@ a:hover { color: var(--highlight); }
 }
 
 .projects-tag {
-    font-size: 9.5px;
+    font-size: 10.5px;
     letter-spacing: 0.14em;
     text-transform: uppercase;
     padding: 5px 11px;
@@ -1108,35 +1112,45 @@ a:hover { color: var(--highlight); }
 
 .projects-tile__repo:hover { color: var(--highlight); opacity: 1; }
 
-/* Hover: image desaturates, description expands, tags bloom */
-.projects-tile:hover .projects-tile__media img {
+/* Hover / keyboard focus: image desaturates, description expands, tags bloom.
+   The tile itself is the <a>, so :focus-visible mirrors every hover reveal. */
+.projects-tile:hover .projects-tile__media img,
+.projects-tile:focus-visible .projects-tile__media img {
     filter: grayscale(85%) contrast(1.05) brightness(0.55);
     transform: scale(1.04);
 }
 
-.projects-tile:hover .projects-tile__desc-rest {
+.projects-tile:hover .projects-tile__desc-rest,
+.projects-tile:focus-visible .projects-tile__desc-rest {
     max-height: 16rem;
     opacity: 1;
 }
 
-.projects-tile:hover .projects-tile__desc-ellipsis { opacity: 0; }
+.projects-tile:hover .projects-tile__desc-ellipsis,
+.projects-tile:focus-visible .projects-tile__desc-ellipsis { opacity: 0; }
 
-.projects-tile:hover .projects-tile__title { color: var(--highlight); }
+.projects-tile:hover .projects-tile__title,
+.projects-tile:focus-visible .projects-tile__title { color: var(--highlight); }
 
-.projects-tile:hover .projects-tile__tags {
+.projects-tile:hover .projects-tile__tags,
+.projects-tile:focus-visible .projects-tile__tags {
     max-height: 100px;
     opacity: 1;
 }
 
-.projects-tile:hover .projects-tag {
+.projects-tile:hover .projects-tag,
+.projects-tile:focus-visible .projects-tag {
     color: var(--highlight);
     border-color: var(--highlight);
 }
 
-.projects-tile:hover .projects-tile__repo { opacity: 0.8; }
+.projects-tile:hover .projects-tile__repo,
+.projects-tile:focus-visible .projects-tile__repo { opacity: 0.8; }
 
 .projects-tile:hover .projects-tile__num,
-.projects-tile:hover .projects-tile__award { opacity: 0; }
+.projects-tile:hover .projects-tile__award,
+.projects-tile:focus-visible .projects-tile__num,
+.projects-tile:focus-visible .projects-tile__award { opacity: 0; }
 
 /* Touch / no-hover devices: there is no hover to expand with, so reveal
    the full description and tags permanently and drop the expand cues. */
@@ -1249,7 +1263,7 @@ a:hover { color: var(--highlight); }
 }
 
 .experience-tag {
-    font-size: 9px;
+    font-size: 10px;
     letter-spacing: 0.12em;
     text-transform: uppercase;
     padding: 5px 10px;
@@ -1504,6 +1518,40 @@ a:hover { color: var(--highlight); }
     color: var(--fg-bright);
     background: var(--bg-cell);
     transform: translateX(10px);
+}
+
+/* Mobile command-palette trigger — injected into the menu as a sibling row
+   of the .mobile-menu-link entries. Same display-face tracking and hairline
+   row rhythm; sized down from the link scale so the long label holds a row. */
+.mobile-menu-cmdk {
+    width: 100%;
+    display: block;
+    text-align: left;
+    font-family: var(--font-display);
+    font-weight: 800;
+    font-stretch: 110%;
+    font-size: clamp(20px, 5.5vw, 28px);
+    letter-spacing: -0.02em;
+    text-transform: uppercase;
+    color: var(--fg-dim);
+    padding: 14px var(--pad);
+    border: 0;
+    border-bottom: 1px solid var(--border);
+    background: transparent;
+    cursor: pointer;
+    -webkit-tap-highlight-color: transparent;
+    transform: translateY(20px);
+    opacity: 0;
+    transition: color 0.15s ease, background 0.2s ease, transform 0.2s ease;
+}
+
+.mobile-menu.is-open .mobile-menu-cmdk { transform: translateY(0); opacity: 1; transition-delay: 0.24s; }
+
+.mobile-menu-cmdk:hover,
+.mobile-menu-cmdk:active,
+.mobile-menu-cmdk:focus-visible {
+    color: var(--fg-bright);
+    background: var(--bg-cell);
 }
 
 .mobile-menu-footer {
@@ -1899,7 +1947,7 @@ a:hover { color: var(--highlight); }
     gap: 18px;
     padding: 10px 14px;
     border-top: 1px solid var(--border);
-    font-size: 9px;
+    font-size: 10px;
     letter-spacing: 0.2em;
     text-transform: uppercase;
     color: var(--fg-dim);
@@ -1934,4 +1982,191 @@ a:hover { color: var(--highlight); }
 .nav-cmdk:focus-visible { outline: 2px solid var(--highlight); outline-offset: 2px; }
 @media (max-width: 600px) {
     .nav-cmdk { display: none; }
+}
+
+/* ================================================================
+   PREFERRED CONTRAST
+   ================================================================ */
+@media (prefers-contrast: more) {
+    :root {
+        --fg-dim: #a89f93;
+        --border: #4a453f;
+        --border-bright: #6a645c;
+    }
+}
+
+/* ================================================================
+   DIARY TEASER — LATEST TRANSMISSIONS (homepage interstitial)
+   ================================================================ */
+/* Accessory band between EXPERIENCE and CONTACT: a light head row
+   (no section number — nav numbering 00–04 is owned by data.yaml)
+   over a 2-wide gapless specimen grid of the latest diary cards.
+   Populated at runtime by js/diary-teaser.js. */
+
+.diary-teaser {
+    border-top: 1px solid var(--border);
+    padding: clamp(40px, 7vh, 90px) var(--pad);
+}
+
+/* JS hides the whole band on any load/parse failure */
+.diary-teaser[hidden] { display: none; }
+
+.diary-teaser__head {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    gap: 16px;
+    margin-bottom: clamp(20px, 4vh, 44px);
+}
+
+/* Eyebrow reuses .section-eyebrow (11px / 0.24em / --fg-dim / uppercase) */
+
+.diary-teaser__open {
+    font-size: 11px;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--fg);
+    text-decoration: none;
+    white-space: nowrap;
+    transition: color 0.15s ease;
+}
+
+.diary-teaser__open:hover,
+.diary-teaser__open:focus-visible {
+    color: var(--fg-bright);
+    text-decoration: underline;
+    text-underline-offset: 5px;
+}
+
+/* ---- Card grid: gapless hairline specimen ---- */
+.diary-teaser__grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 0;
+    border-top: 1px solid var(--border);
+    border-bottom: 1px solid var(--border);
+}
+
+.diary-teaser__card {
+    display: block;
+    text-decoration: none;
+    background: var(--bg-cell);
+    padding: clamp(20px, 3vw, 36px);
+    min-height: 200px;
+    transition: background-color 0.25s ease, color 0.2s ease, opacity 0.45s ease, transform 0.3s ease;
+    -webkit-tap-highlight-color: transparent;
+}
+
+.diary-teaser__card + .diary-teaser__card { border-left: 1px solid var(--border); }
+
+.diary-teaser__card:hover,
+.diary-teaser__card:focus-visible {
+    background: var(--bg-elevated);
+    transform: translate3d(0, -2px, 0);
+}
+
+.diary-teaser__card:hover .diary-teaser__title,
+.diary-teaser__card:focus-visible .diary-teaser__title { color: var(--fg-bright); }
+
+.diary-teaser__card:hover .diary-teaser__date,
+.diary-teaser__card:focus-visible .diary-teaser__date { color: var(--accent-bright); }
+
+/* Site focus-ring convention (mirrors :focus-visible above) */
+.diary-teaser__card:focus-visible,
+.diary-teaser__open:focus-visible {
+    outline: 2px solid var(--highlight);
+    outline-offset: 2px;
+}
+
+/* ---- Card internals ---- */
+.diary-teaser__date {
+    display: block;
+    font-size: 10px;
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+    color: var(--fg-dim);
+    font-variant-numeric: tabular-nums;
+    margin-bottom: 14px;
+    transition: color 0.2s ease;
+}
+
+.diary-teaser__title {
+    display: block;
+    font-family: var(--font-display);
+    font-weight: 700;
+    font-stretch: 110%;
+    font-size: clamp(22px, 3vw, 34px);
+    line-height: 0.95;
+    letter-spacing: -0.01em;
+    text-transform: uppercase;
+    color: var(--fg);
+    margin-bottom: 14px;
+    transition: color 0.2s ease;
+}
+
+.diary-teaser__summary {
+    display: -webkit-box;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 3;
+    line-clamp: 3;
+    overflow: hidden;
+    font-size: 14px;
+    line-height: 1.6;
+    color: var(--fg);
+}
+
+.diary-teaser__tags {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin-top: 18px;
+}
+
+/* Chip vocabulary borrowed from .projects-tag */
+.diary-teaser__tag {
+    font-size: 10px;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    padding: 4px 10px;
+    border: 1px solid var(--border);
+    color: var(--accent-bright);
+    background: rgba(10, 10, 10, 0.6);
+}
+
+.diary-teaser__time {
+    display: block;
+    margin-top: 16px;
+    font-size: 10px;
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+    color: var(--highlight);
+    font-variant-numeric: tabular-nums;
+}
+
+/* ---- Gentle reveal (driven by js/diary-teaser.js) ---- */
+.diary-teaser__card.is-revealing {
+    opacity: 0;
+    transform: translate3d(0, 12px, 0);
+}
+
+.diary-teaser--no-motion .diary-teaser__card,
+.diary-teaser--no-motion .diary-teaser__card.is-revealing {
+    transition: none;
+}
+
+/* Single column under 700px — hairline moves from between-cards
+   (border-left) to between-rows (border-top) */
+@media (max-width: 700px) {
+    .diary-teaser__grid { grid-template-columns: 1fr; }
+    .diary-teaser__card + .diary-teaser__card {
+        border-left: 0;
+        border-top: 1px solid var(--border);
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .diary-teaser__card,
+    .diary-teaser__open { transition: none; }
+    .diary-teaser__card:hover,
+    .diary-teaser__card:focus-visible { transform: none; }
 }
