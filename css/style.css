@@ -120,7 +120,7 @@
     --bg-cell: #0e0e0c;
     --bg-cell-2: #131311;
     --fg: #c8c2b8;
-    --fg-dim: #6b6560;
+    --fg-dim: #827a70;
     --fg-bright: #f2eee7;
     --accent: #8a7f72;
     --accent-bright: #b5a898;
@@ -1333,7 +1333,7 @@ a:hover { color: var(--highlight); }
     line-height: 1.1;
     color: var(--fg-bright);
     letter-spacing: -0.01em;
-    word-break: break-all;
+    overflow-wrap: anywhere;
     transition: color 0.2s ease;
 }
 
