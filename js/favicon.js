@@ -370,9 +370,9 @@
     /** Escape a string for safe inclusion as XML text content. */
     function escapeXml(str) {
         return String(str)
-            .replace(/&/g, '&')
-            .replace(/</g, '<')
-            .replace(/>/g, '>');
+            .replace(/&/g, '&amp;')
+            .replace(/</g, '&lt;')
+            .replace(/>/g, '&gt;');
     }
 
     /** Serialise an iterable of "x,y" keys into a compact <rect> list. */

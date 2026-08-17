@@ -16,17 +16,25 @@
          exact markup js/main.js + js/diary-teaser.js generate.
        - diary.html : fills #diaryHeader / #diaryStack between
          markers, mirroring js/diary.js plate markup.
-       - diary/entries/<stem>.html : one static, JS-free article
-         page per entry (full markdown body, OG + JSON-LD).
-       - rss.xml     : full feed; items point at the static entry
-         pages and carry the rendered body in <content:encoded>.
-       - sitemap.xml : home + diary + one URL per entry page.
+        - diary/entries/<stem>.html : one static, JS-free article
+          page per entry (full markdown body, OG + JSON-LD).
+        - rss.xml     : full feed; items point at the static entry
+          pages and carry the rendered body in <content:encoded>.
+        - sitemap.xml : home + diary + one URL per entry page.
+        - sw.js       : refreshes the offline.html precache revision
+          (content hash) when offline.html changes.
+
+    Idempotent: run twice, get byte-identical output — every emitted
+    timestamp is derived from source-file mtimes, never the run date.
+    Orphaned diary/entries/*.html files from removed entries are
+    deleted. Node >= 18 (ESM, node: modules only).
 
    The runtime scripts replace the prerendered container
    innerHTML on hydration, so this markup is safely overwritten
    whenever JS runs. Node >= 18 (ESM, node: modules only).
    ============================================================ */
 
+import { createHash } from 'node:crypto';
 import { createRequire } from 'node:module';
 import fs from 'node:fs';
 import path from 'node:path';
@@ -111,18 +119,88 @@ function htmlWords(html) {
 }
 
 // js/diary.js computeReadingTime — full rendered body, 200 wpm, min 1.
-function readingTimeBody(html) {
+// The numeric minutes also feed the plate data-reading-time attribute
+// the runtime JS reads before hydration.
+function minutesBody(html) {
     const words = htmlWords(html);
-    if (!words) return '1 MIN READ';
-    return Math.max(1, Math.round(words / 200)) + ' MIN READ';
+    return words ? Math.max(1, Math.round(words / 200)) : 1;
 }
 
-// js/diary.js estimateReadingTime — plate badge from the summary, 200 wpm.
-function readingTimePlate(text) {
-    const words = String(text || '').split(/\s+/).filter(Boolean);
-    if (!words) return '1 MIN READ';
-    return Math.max(1, Math.round(words.length / 200)) + ' MIN READ';
+function readingTimeBody(html) {
+    return minutesBody(html) + ' MIN READ';
 }
+
+// ---- IMAGE DIMENSIONS + FILE MTIMES -----------------------------------------
+
+// Minimal PNG/JPEG/WebP header sniff (~40 lines, no deps) — reads just
+// enough bytes to report true pixel dimensions for width/height
+// attributes and og:image:width/height. Returns null when the format
+// or header is unrecognized; callers must skip dimensions in that case
+// rather than guess.
+const dimsCache = new Map(); // rel path -> {width,height} | null
+function imageDimensions(rel) {
+    if (dimsCache.has(rel)) return dimsCache.get(rel);
+    let dims = null;
+    try {
+        const buf = fs.readFileSync(path.join(ROOT, rel));
+        // PNG: 8-byte signature, then IHDR (type at 12) with BE width/height.
+        if (buf.length > 24 && buf.readUInt32BE(12) === 0x49484452) {
+            dims = { width: buf.readUInt32BE(16), height: buf.readUInt32BE(20) };
+        }
+        // JPEG: walk the marker segments to the first SOFn frame header.
+        else if (buf.length > 4 && buf[0] === 0xff && buf[1] === 0xd8) {
+            let off = 2;
+            while (off + 9 < buf.length) {
+                if (buf[off] !== 0xff) { off++; continue; }
+                const marker = buf[off + 1];
+                // SOF0..SOF15 minus DHT (C4), JPG (C8), DAC (CC) carry dimensions.
+                if (marker >= 0xc0 && marker <= 0xcf && marker !== 0xc4 && marker !== 0xc8 && marker !== 0xcc) {
+                    dims = { height: buf.readUInt16BE(off + 5), width: buf.readUInt16BE(off + 7) };
+                    break;
+                }
+                const len = buf.readUInt16BE(off + 2);
+                if (len < 2) break; // corrupt segment — give up, skip dimensions
+                off += 2 + len;
+            }
+        }
+        // WebP: "RIFF"...."WEBP" + VP8 (lossy) / VP8L (lossless) / VP8X (extended).
+        else if (buf.length > 30 && buf.toString('ascii', 0, 4) === 'RIFF' && buf.toString('ascii', 8, 12) === 'WEBP') {
+            const fourcc = buf.toString('ascii', 12, 16);
+            if (fourcc === 'VP8 ') {
+                dims = { width: buf.readUInt16LE(26) & 0x3fff, height: buf.readUInt16LE(28) & 0x3fff };
+            } else if (fourcc === 'VP8L') {
+                const bits = buf.readUInt32LE(21);
+                dims = { width: (bits & 0x3fff) + 1, height: ((bits >> 14) & 0x3fff) + 1 };
+            } else if (fourcc === 'VP8X') {
+                dims = {
+                    width: 1 + (buf[24] | (buf[25] << 8) | (buf[26] << 16)),
+                    height: 1 + (buf[27] | (buf[28] << 8) | (buf[29] << 16))
+                };
+            }
+        }
+    } catch (e) {
+        dims = null; // unreadable file — callers skip dimensions
+    }
+    if (dims && dims.width > 0 && dims.height > 0) {
+        dimsCache.set(rel, dims);
+        return dims;
+    }
+    dimsCache.set(rel, null);
+    return null;
+}
+
+// Entry .md modification time (cached) — the source of truth for
+// dateModified / sitemap lastmod, so outputs stay idempotent across
+// runs without embedding the run date.
+const mtimeCache = new Map(); // rel path -> Date
+function fileMtime(rel) {
+    if (!mtimeCache.has(rel)) {
+        mtimeCache.set(rel, fs.statSync(path.join(ROOT, rel)).mtime);
+    }
+    return mtimeCache.get(rel);
+}
+
+const mdMtime = (entry) => fileMtime(String(entry.body || ''));
 
 // js/diary-teaser.js estimateMinutes — teaser card, 180 wpm, rounds up.
 function teaserMinutes(text) {
@@ -284,9 +362,10 @@ function genHeroStats(hero) {
     }).join('\n');
 }
 
-function genMarqueeTrack(data) {
-    const items = (data.marquee && data.marquee.items) || [];
-    const sep = (data.marquee && data.marquee.separator) || '✦';
+function genMarqueeTrack(data, band) {
+    const cfg = (band === 2 ? (data.marquee_secondary || data.marquee) : data.marquee) || {};
+    const items = cfg.items || [];
+    const sep = cfg.separator || '✦';
     const seq = (dup) => items.map((t) => {
         const d = dup ? ' data-dup' : '';
         return `<span class="marquee-item"${d}>${esc(t)}</span><span class="marquee-sep"${d}>${esc(sep)}</span>`;
@@ -413,10 +492,17 @@ function genContactFooter(contact) {
     return (contact.footer || []).map((t) => `<span>${esc(t)}</span>`).join('\n');
 }
 
-// js/main.js generateContact appends an empty portrait frame into the title
-// row (canvas mount for js/contact-cloud.js) — mirrored as an empty div.
+// js/main.js generateContact appends the portrait frame (with fallback <img>)
+// into the title row — canvas mount for js/contact-cloud.js. The <img> shows
+// whenever the ASCII cloud can't run (no-JS / Save-Data / WebGL failure).
 function contactHeadExtra() {
-    return `<div class="contact-portrait" aria-hidden="true"></div>`;
+    return `<div class="contact-portrait" aria-hidden="true"><img src="assets/profile_pic.webp" alt="" loading="lazy" decoding="async"></div>`;
+}
+
+// Sub-text under the contact head — mirrors generateContact's .contact-subtext.
+function contactSubText(contact) {
+    if (!contact.sub_text) return '';
+    return `\n<p class="contact-subtext">${esc(contact.sub_text)}</p>`;
 }
 
 // ---- DIARY GENERATORS (mirror js/diary.js markup) --------------------------
@@ -434,10 +520,13 @@ function genDiaryHeader(page) {
 
 // Static variant of generatePlate: same structure, but the OPEN button is an
 // anchor to the static entry page and the JS-only openable hooks are dropped.
-function genPlate(entry, position, stem) {
+// The badge shows the BODY-based reading time (the runtime refines the same
+// value after fetching the .md); data-entry-id / data-reading-time are the
+// contract the runtime JS reads off the prerendered plate before hydration.
+function genPlate(entry, position, stem, readMinutes) {
     const out = [];
     const alt = position % 2 === 1 ? ' plate--alt' : '';
-    out.push(`<article class="plate${alt}" data-index="${esc(entry.index || '')}">`);
+    out.push(`<article class="plate${alt}" data-index="${esc(entry.index || '')}" data-entry-id="${esc(entry.index || '')}" data-reading-time="${readMinutes}">`);
     out.push(`    <div class="plate__index">${esc(entry.index || '')}</div>`);
     if (entry.date) out.push(`    <div class="plate__date">${esc(entry.date)}</div>`);
     out.push(`    <div class="plate__text">`);
@@ -449,7 +538,7 @@ function genPlate(entry, position, stem) {
         out.push(`        <div class="plate__tags"><b>&#9612;TAGS</b>&nbsp;&nbsp;${tagsHtml}</div>`);
     }
     if (entry.body) {
-        out.push(`        <span class="plate__reading-time">${esc(readingTimePlate(entry.summary))}</span>`);
+        out.push(`        <span class="plate__reading-time">${readMinutes} MIN READ</span>`);
     }
     if (entry.body) {
         out.push(`        <a class="plate__open" href="${ENTRY_DIR_REL}/${esc(stem)}.html">[ OPEN_TRANSMISSION ${esc(entry.index || '')} &rarr; ]</a>`);
@@ -633,6 +722,21 @@ a { cursor: pointer; }
 }
 .ep-nav-btn:hover { border-color: var(--highlight); }
 .ep-nav-btn--off { color: var(--fg-dim); opacity: 0.45; }
+.ep-share { display: flex; gap: 10px; flex-wrap: wrap; }
+.ep-share__link {
+    font-family: var(--font-mono);
+    font-size: 11px;
+    letter-spacing: 0.2em;
+    text-transform: uppercase;
+    color: var(--accent-bright);
+    text-decoration: none;
+    background: none;
+    border: 1px solid var(--border-bright);
+    padding: 9px 13px;
+    cursor: pointer;
+    transition: color var(--transition-raw), border-color var(--transition-raw);
+}
+.ep-share__link:hover { color: var(--highlight); border-color: var(--highlight); }
 .ep-interactive {
     align-self: flex-start;
     font-size: 11px;
@@ -649,10 +753,11 @@ a { cursor: pointer; }
 }
 `;
 
-function buildEntryPage({ entry, position, stem, bodyHtml, readTime, prev, next, copyright }) {
+function buildEntryPage({ entry, stem, bodyHtml, readMinutes, modifiedIso, imageDims, prev, next, copyright }) {
     const canonical = absUrl(`${ENTRY_DIR_REL}/${stem}.html`);
     const ogImage = entry.image ? absUrl(entry.image) : absUrl('assets/og-image.png');
     const isoDate = yamlDateToISO(entry.date);
+    const readTime = readMinutes + ' MIN READ';
 
     const prevHtml = prev
         ? `<a class="ep-nav-btn" href="${esc(prev.stem)}.html">&lsaquo; PREV: ${esc(prev.title)}</a>`
@@ -661,10 +766,13 @@ function buildEntryPage({ entry, position, stem, bodyHtml, readTime, prev, next,
         ? `<a class="ep-nav-btn" href="${esc(next.stem)}.html">NEXT: ${esc(next.title)} &rsaquo;</a>`
         : `<span class="ep-nav-btn ep-nav-btn--off" aria-disabled="true">NEXT &rsaquo;</span>`;
 
+    // Above-the-fold hero: eager + high priority + true dimensions so the
+    // browser can reserve layout space and start the fetch immediately.
+    const dimsAttr = imageDims ? ` width="${imageDims.width}" height="${imageDims.height}"` : '';
     const imageHtml = entry.image ? [
         ``,
         `        <figure class="ep-image">`,
-        `            <picture>${entry.image_webp ? `<source srcset="${esc(entryRel(entry.image_webp))}" type="image/webp">` : ''}<img src="${esc(entryRel(entry.image))}" alt="${esc(entry.image_alt || '')}" loading="lazy" decoding="async"></picture>`,
+        `            <picture>${entry.image_webp ? `<source srcset="${esc(entryRel(entry.image_webp))}" type="image/webp">` : ''}<img src="${esc(entryRel(entry.image))}" alt="${esc(entry.image_alt || '')}" loading="eager" fetchpriority="high" decoding="async"${dimsAttr}></picture>`,
         `        </figure>`
     ].join('\n') : '';
 
@@ -672,15 +780,55 @@ function buildEntryPage({ entry, position, stem, bodyHtml, readTime, prev, next,
         '@context': 'https://schema.org',
         '@type': 'BlogPosting',
         headline: entry.title,
+        description: entry.summary,
+        keywords: (Array.isArray(entry.tags) ? entry.tags : []).join(', '),
+        wordCount: htmlWords(bodyHtml),
+        articleSection: 'Dev Diary',
         datePublished: isoDate,
-        dateModified: isoDate,
-        author: { '@type': 'Person', name: 'Ibrahim Faruquee', url: 'https://ibrahimf1.github.io/#person' },
+        dateModified: modifiedIso,
+        author: { '@type': 'Person', '@id': `${SITE}/#person`, name: 'Ibrahim Faruquee', url: `${SITE}/` },
+        publisher: { '@id': `${SITE}/#person` },
+        isPartOf: { '@id': `${SITE}/diary.html#blog` },
         mainEntityOfPage: canonical,
         image: ogImage,
         inLanguage: 'en-US'
     }).replace(/</g, '\\u003c');
 
-    const bodyLines = bodyHtml.split('\n').map((l) => (l ? '        ' + l : '')).join('\n');
+    // OG image dimensions only when truly sniffed from the file header —
+    // never guessed (the OG image is the project asset, not a fixed 1200x630).
+    const ogImageDims = imageDims
+        ? `    <meta property="og:image:width" content="${imageDims.width}">\n    <meta property="og:image:height" content="${imageDims.height}">\n`
+        : '';
+
+    // Indent rendered body lines for readability — except inside <pre>,
+    // where leading whitespace is literal content and would corrupt code
+    // blocks. A per-line <pre>/</pre> scan tracks the state in document order.
+    let inPre = false;
+    const bodyLines = bodyHtml.split('\n').map((l) => {
+        const startsInPre = inPre;
+        for (const m of l.matchAll(/<pre[\s>]|<\/pre>/g)) {
+            inPre = m[0] === '</pre>' ? false : true;
+        }
+        return startsInPre || !l ? l : '        ' + l;
+    }).join('\n');
+
+    // Static share row: X intent + LinkedIn share + copy-link with a
+    // clipboard fallback (no framework, single inline handler).
+    const xHref = 'https://twitter.com/intent/tweet?text=' + encodeURIComponent(entry.title) + '&url=' + encodeURIComponent(canonical);
+    const liHref = 'https://www.linkedin.com/sharing/share-offsite/?url=' + encodeURIComponent(canonical);
+    const copyOnclick =
+        'var b=this,u=b.dataset.url,t=b.textContent;' +
+        'var s=function(){b.textContent=\'[ LINK COPIED ]\';setTimeout(function(){b.textContent=t},2000)};' +
+        'var f=function(){try{var i=document.createElement(\'textarea\');i.value=u;' +
+        'document.body.appendChild(i);i.select();document.execCommand(\'copy\');i.remove();s()}catch(e){}};' +
+        'if(navigator.clipboard&&navigator.clipboard.writeText){navigator.clipboard.writeText(u).then(s,f)}else{f()}';
+    const shareHtml = [
+        `            <div class="ep-share">`,
+        `                <a class="ep-share__link" href="${esc(xHref)}" target="_blank" rel="noopener noreferrer">[ SHARE ON X ]</a>`,
+        `                <a class="ep-share__link" href="${esc(liHref)}" target="_blank" rel="noopener noreferrer">[ SHARE ON LINKEDIN ]</a>`,
+        `                <button class="ep-share__link" type="button" data-url="${esc(canonical)}" onclick="${esc(copyOnclick)}">[ COPY LINK ]</button>`,
+        `            </div>`
+    ].join('\n');
 
     return `<!DOCTYPE html>
 <html lang="en">
@@ -698,14 +846,18 @@ function buildEntryPage({ entry, position, stem, bodyHtml, readTime, prev, next,
     <meta name="referrer" content="strict-origin-when-cross-origin">
     <link rel="icon" type="image/svg+xml" href="../../assets/favicon.svg">
     <link rel="alternate" type="application/rss+xml" title="Dev Diary — Ibrahim Faruquee" href="https://ibrahimf1.github.io/rss.xml">
+    <link rel="preload" href="../../fonts/spacemono-normal-400-latin.woff2" as="font" type="font/woff2" crossorigin>
     <!-- Open Graph -->
     <meta property="og:type" content="article">
     <meta property="og:title" content="${esc(entry.title)} — Dev Diary — Ibrahim Faruquee">
     <meta property="og:description" content="${esc(entry.summary)}">
     <meta property="og:image" content="${esc(ogImage)}">
-    <meta property="og:url" content="${esc(canonical)}">
+${ogImageDims}    <meta property="og:url" content="${esc(canonical)}">
     <meta property="og:site_name" content="Ibrahim Faruquee">
     <meta property="og:locale" content="en_US">
+    <meta property="article:published_time" content="${isoDate}">
+    <meta property="article:modified_time" content="${modifiedIso}">
+    <meta property="article:author" content="${SITE}/">
     <!-- Twitter -->
     <meta name="twitter:card" content="summary_large_image">
     <meta name="twitter:title" content="${esc(entry.title)} — Dev Diary — Ibrahim Faruquee">
@@ -715,6 +867,8 @@ function buildEntryPage({ entry, position, stem, bodyHtml, readTime, prev, next,
     <script type="application/ld+json">${jsonLd}</script>
     <link rel="stylesheet" href="../../css/diary.css">
     <style>${ENTRY_SHELL_CSS}</style>
+    <!-- Umami analytics -->
+    <script defer src="https://cloud.umami.is/script.js" data-website-id="5cc65dfa-2570-4543-b045-535f415f3fdd"></script>
 </head>
 
 <body>
@@ -740,6 +894,7 @@ ${bodyLines}
                 ${prevHtml}
                 ${nextHtml}
             </div>
+${shareHtml}
             <a class="ep-interactive" href="../../diary.html#entry-${esc(entry.index)}">OPEN INTERACTIVE VERSION &#8599;</a>
             <p class="ep-copy">${esc(copyright)}</p>
         </footer>
@@ -752,7 +907,10 @@ ${bodyLines}
 
 // ---- FEEDS -----------------------------------------------------------------
 
-function buildRss({ entries, renderedBodies, buildDate }) {
+function buildRss({ entries, renderedBodies, copyright }) {
+    // Deterministic build date: the newest entry's pubDate (never the run
+    // date) so two runs with unchanged sources emit byte-identical XML.
+    const newest = entries.reduce((a, b) => (String(b.date || '') > String(a.date || '') ? b : a), entries[0]);
     const items = entries.map((entry) => {
         const pageUrl = absUrl(`${ENTRY_DIR_REL}/${stemOf(entry)}.html`);
         const cats = (entry.tags || []).map((t) => `      <category>${esc(t)}</category>`).join('\n');
@@ -766,6 +924,7 @@ function buildRss({ entries, renderedBodies, buildDate }) {
             `      <guid isPermaLink="true">${esc(pageUrl)}</guid>`,
             `      <pubDate>${yamlDateToRFC822(entry.date)}</pubDate>`,
             `      <description>${esc(entry.summary)}</description>`,
+            `      <dc:creator>Ibrahim Faruquee</dc:creator>`,
             cats,
             `      <content:encoded><![CDATA[${content}]]></content:encoded>`,
             `    </item>`
@@ -773,13 +932,15 @@ function buildRss({ entries, renderedBodies, buildDate }) {
     }).join('\n\n');
 
     return `<?xml version="1.0" encoding="UTF-8"?>
-<rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom" xmlns:content="http://purl.org/rss/1.0/modules/content/">
+<rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom" xmlns:content="http://purl.org/rss/1.0/modules/content/" xmlns:dc="http://purl.org/dc/elements/1.1/">
   <channel>
     <title>Dev Diary — Ibrahim Faruquee</title>
     <link>https://ibrahimf1.github.io/diary.html</link>
     <description>Development journal of Ibrahim Faruquee — field notes on full-stack builds, applied machine learning, real-time systems, and the interfaces in between.</description>
     <language>en-us</language>
-    <lastBuildDate>${buildDate.toUTCString()}</lastBuildDate>
+    <copyright>${esc(copyright)}</copyright>
+    <managingEditor>ifaruquee1@gmail.com (Ibrahim Faruquee)</managingEditor>
+    <lastBuildDate>${newest ? yamlDateToRFC822(newest.date) : new Date(0).toUTCString()}</lastBuildDate>
     <atom:link href="https://ibrahimf1.github.io/rss.xml" rel="self" type="application/rss+xml"/>
 
 ${items}
@@ -788,17 +949,26 @@ ${items}
 `;
 }
 
-function buildSitemap({ entries, genDate }) {
-    const newest = entries.reduce((a, b) => (String(b.date || '') > String(a.date || '') ? b : a), entries[0]);
-    const entryUrls = entries.map((entry) => (
-        `  <url>\n    <loc>${esc(absUrl(`${ENTRY_DIR_REL}/${stemOf(entry)}.html`))}</loc>\n    <lastmod>${yamlDateToISO(entry.date)}</lastmod>\n  </url>`
-    )).join('\n');
+function buildSitemap({ entries, homeLastmod }) {
+    // Diary listing changes when the YAML or any entry body changes.
+    const diaryLastmod = entries.reduce(
+        (newest, entry) => { const m = mdMtime(entry); return m > newest ? m : newest; },
+        fileMtime('diary/diary.yaml')
+    );
+    const entryUrls = entries.map((entry) => {
+        // Entry page freshness derives from its .md mtime; the project
+        // asset doubles as the sitemap image for the entry.
+        const imageTag = entry.image
+            ? `\n    <image:image>\n      <image:loc>${esc(absUrl(entry.image))}</image:loc>\n    </image:image>`
+            : '';
+        return `  <url>\n    <loc>${esc(absUrl(`${ENTRY_DIR_REL}/${stemOf(entry)}.html`))}</loc>\n    <lastmod>${toISODate(mdMtime(entry))}</lastmod>${imageTag}\n  </url>`;
+    }).join('\n');
     return `<?xml version="1.0" encoding="UTF-8"?>
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9"
         xmlns:image="http://www.google.com/schemas/sitemap-image/1.1">
   <url>
     <loc>https://ibrahimf1.github.io/</loc>
-    <lastmod>${toISODate(genDate)}</lastmod>
+    <lastmod>${toISODate(homeLastmod)}</lastmod>
     <changefreq>monthly</changefreq>
     <priority>1.0</priority>
     <image:image>
@@ -807,13 +977,39 @@ function buildSitemap({ entries, genDate }) {
   </url>
   <url>
     <loc>https://ibrahimf1.github.io/diary.html</loc>
-    <lastmod>${newest ? yamlDateToISO(newest.date) : toISODate(genDate)}</lastmod>
+    <lastmod>${toISODate(diaryLastmod)}</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.8</priority>
   </url>
 ${entryUrls}
 </urlset>
 `;
+}
+
+// ---- SERVICE WORKER SYNC ---------------------------------------------------
+
+// sw.js precaches offline.html with a revision string; derive it from the
+// file's sha256 so any edit invalidates the precache without manual bumps.
+// Only rewrites sw.js when the hash actually changed.
+function syncOfflineRevision() {
+    const hash = createHash('sha256').update(fs.readFileSync(path.join(ROOT, 'offline.html'))).digest('hex');
+    let sw;
+    try {
+        sw = fs.readFileSync(path.join(ROOT, 'sw.js'), 'utf8');
+    } catch (e) {
+        console.error('prerender: WARN — sw.js unreadable, offline.html revision not synced');
+        return;
+    }
+    const rx = /(url: 'offline\.html', revision: ')[^']*(')/;
+    if (!rx.test(sw)) {
+        console.error('prerender: WARN — offline.html precache revision not found in sw.js');
+        return;
+    }
+    const next = sw.replace(rx, `$1${hash}$2`);
+    if (next !== sw) {
+        fs.writeFileSync(path.join(ROOT, 'sw.js'), next);
+        console.log('prerender: synced offline.html precache revision in sw.js (' + hash.slice(0, 12) + '\u2026)');
+    }
 }
 
 // ---- MAIN ------------------------------------------------------------------
@@ -847,6 +1043,7 @@ function main() {
     });
     assertFile('assets/favicon.svg', 'entry-page favicon');
     assertFile('assets/og-image.png', 'sitemap OG image');
+    assertFile('offline.html', 'service worker offline fallback');
 
     // ---- render markdown bodies once (shared by entry pages + RSS) ----------
     const md = makeMarkdownParser();
@@ -872,15 +1069,15 @@ function main() {
         ['navLinks', genNavLinks(data)],
         ['heroSocial', genHeroSocial(data.hero)],
         ['heroStats', genHeroStats(data.hero)],
-        ['marqueeTrack1', genMarqueeTrack(data)],
-        ['marqueeTrack2', genMarqueeTrack(data)],
+        ['marqueeTrack1', genMarqueeTrack(data, 1)],
+        ['marqueeTrack2', genMarqueeTrack(data, 2)],
         ['aboutHead', buildSectionHead({ num: data.about.number, eyebrow: data.about.eyebrow, lines: data.about.statement, goldLast: true })],
         ['aboutGrid', genAboutGrid(data.about)],
         ['projectsHead', buildSectionHead({ num: data.projects.number, eyebrow: data.projects.eyebrow, lines: [data.projects.heading.line1, data.projects.heading.line2], goldLast: true })],
         ['projectsGrid', genProjectsGrid(data.projects)],
         ['experienceHead', buildSectionHead({ num: data.experience.number, eyebrow: data.experience.eyebrow, lines: [data.experience.heading.line1, data.experience.heading.line2], goldLast: true })],
         ['experienceList', genExperienceList(data.experience)],
-        ['contactHead', buildSectionHead({ num: contact.number, eyebrow: contact.eyebrow, lines: [contact.heading.line1, contact.heading.line2], goldLast: true, dither: false, titleRowExtra: contactHeadExtra() })],
+        ['contactHead', buildSectionHead({ num: contact.number, eyebrow: contact.eyebrow, lines: [contact.heading.line1, contact.heading.line2], goldLast: true, dither: false, titleRowExtra: contactHeadExtra() }) + contactSubText(contact)],
         ['contactGrid', genContactGrid(contact)],
         ['contactFooter', genContactFooter(contact)],
         ['diaryTeaserGrid', genTeaserGrid(entries)]
@@ -891,7 +1088,7 @@ function main() {
     // ---- diary.html -----------------------------------------------------------
     let diaryHtml = readUtf8('diary.html');
     diaryHtml = inject(diaryHtml, 'diaryHeader', genDiaryHeader(page));
-    diaryHtml = inject(diaryHtml, 'diaryStack', entries.map((entry, i) => genPlate(entry, i, stemOf(entry))).join('\n'));
+    diaryHtml = inject(diaryHtml, 'diaryStack', entries.map((entry, i) => genPlate(entry, i, stemOf(entry), minutesBody(renderedBodies.get(entry.body)))).join('\n'));
     write('diary.html', diaryHtml);
 
     // ---- static entry pages ---------------------------------------------------
@@ -903,10 +1100,11 @@ function main() {
             `${ENTRY_DIR_REL}/${stemOf(entry)}.html`,
             buildEntryPage({
                 entry,
-                position: i,
                 stem: stemOf(entry),
                 bodyHtml,
-                readTime: readingTimeBody(bodyHtml),
+                readMinutes: minutesBody(bodyHtml),
+                modifiedIso: toISODate(mdMtime(entry)),
+                imageDims: imageDimensions(entry.image || 'assets/og-image.png'),
                 prev: i > 0 ? { stem: stemOf(entries[i - 1]), title: entries[i - 1].title } : null,
                 next: i < entries.length - 1 ? { stem: stemOf(entries[i + 1]), title: entries[i + 1].title } : null,
                 copyright
@@ -914,10 +1112,28 @@ function main() {
         );
     });
 
+    // ---- orphan cleanup ---------------------------------------------------------
+    // Static entry pages whose YAML entry no longer exists would otherwise
+    // linger (and stay in sitemaps/feeds of older deploys) forever.
+    const keepHtml = new Set(entries.map((entry) => `${stemOf(entry)}.html`));
+    fs.readdirSync(path.join(ROOT, ENTRY_DIR_REL)).forEach((file) => {
+        if (!file.endsWith('.html') || keepHtml.has(file)) return;
+        fs.unlinkSync(path.join(ROOT, ENTRY_DIR_REL, file));
+        console.log('prerender: removed orphan entry page ' + ENTRY_DIR_REL + '/' + file);
+    });
+
     // ---- feeds ----------------------------------------------------------------
-    const now = new Date();
-    write('rss.xml', buildRss({ entries, renderedBodies, buildDate: now }));
-    write('sitemap.xml', buildSitemap({ entries, genDate: now }));
+    // Home freshness = the newest mtime among every source the home shell
+    // derives from (never the run date, keeping output idempotent).
+    const homeLastmod = ['data.yaml', 'diary/diary.yaml', ...entries.map((entry) => entry.body)].reduce(
+        (newest, rel) => { const m = fileMtime(rel); return (!newest || m > newest) ? m : newest; },
+        null
+    );
+    write('rss.xml', buildRss({ entries, renderedBodies, copyright }));
+    write('sitemap.xml', buildSitemap({ entries, homeLastmod }));
+
+    // ---- service worker offline revision ---------------------------------------
+    syncOfflineRevision();
 
     // ---- summary ----------------------------------------------------------------
     console.log('prerender: OK — wrote ' + written.length + ' file(s):');

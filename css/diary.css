@@ -593,8 +593,30 @@
     overflow-y: auto;
     overflow-x: hidden;
 }
+
+/* Reading progress — thin strip pinned to the reader's top edge,
+   driven by .reader__scroll (rAF-throttled in js/diary.js) */
+.reader__progress {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 2px;
+    background: var(--highlight);
+    transform-origin: 0 50%;
+    transform: scaleX(0);
+    z-index: 10;
+    pointer-events: none;
+    opacity: 0;
+    transition: opacity 0.3s ease;
+}
+.reader.is-open .reader__progress {
+    opacity: 1;
+}
 .reader__inner {
-    max-width: 760px;
+    /* 62ch ≈ 60-65 characters per line for the mono body face —
+       a calmer measure than the old fixed 760px */
+    max-width: 62ch;
     margin: 0 auto;
     padding: 64px 30px 160px;
 }
@@ -631,7 +653,7 @@
 }
 
 .diary-body__paragraph {
-    font-size: 15px;
+    font-size: 14px;
     line-height: 1.9;
     color: var(--fg);
     margin-bottom: 20px;
@@ -650,6 +672,93 @@
     color: var(--highlight);
 }
 
+/* Links inside rendered bodies — visible affordance: bright face,
+   hairline accent underline, highlight on hover/focus */
+.diary-body__paragraph a,
+.diary-body__list li a,
+.diary-body__quote a {
+    color: var(--fg-bright);
+    text-decoration: none;
+    border-bottom: 1px solid var(--accent);
+    transition: color var(--transition-raw), border-color var(--transition-raw);
+}
+.diary-body__paragraph a:hover,
+.diary-body__list li a:hover,
+.diary-body__quote a:hover,
+.diary-body__paragraph a:focus-visible,
+.diary-body__list li a:focus-visible,
+.diary-body__quote a:focus-visible {
+    color: var(--highlight);
+    border-bottom-color: var(--accent-bright);
+}
+
+/* Images inside rendered bodies — block, fluid, hairline-framed */
+.diary-body__paragraph img,
+.diary-body__list li img,
+.diary-body__quote img {
+    display: block;
+    max-width: 100%;
+    height: auto;
+    margin: 28px 0;
+    border: 1px solid var(--border);
+}
+
+/* Tables + rules — minimal, so they never render unstyled */
+.reader__inner table {
+    width: 100%;
+    border-collapse: collapse;
+    margin: 28px 0;
+    font-family: var(--font-mono);
+    font-size: 13px;
+    line-height: 1.6;
+}
+.reader__inner th,
+.reader__inner td {
+    border: 1px solid var(--border);
+    padding: 8px 12px;
+    text-align: left;
+}
+.reader__inner th {
+    background: var(--bg-elevated);
+    color: var(--fg-bright);
+    font-size: 10px;
+    letter-spacing: 0.2em;
+    text-transform: uppercase;
+}
+.reader__inner hr {
+    border: none;
+    border-top: 1px solid var(--border-bright);
+    margin: 40px 0;
+}
+
+/* Tabs in code (pre + inline) render at a fixed width */
+.reader__inner pre,
+.reader__inner code {
+    tab-size: 4;
+    -moz-tab-size: 4;
+}
+
+/* Hover "#" anchor — rides at the heading's right edge (flex row) */
+.diary-body__anchor {
+    margin-left: auto;
+    color: var(--accent-bright);
+    text-decoration: none;
+    font-size: 0.75em;
+    letter-spacing: 0;
+    opacity: 0;
+    transition: opacity 0.15s ease, color var(--transition-raw);
+}
+.diary-body__heading:hover .diary-body__anchor,
+.diary-body__anchor:focus-visible {
+    opacity: 1;
+}
+.diary-body__anchor:hover {
+    color: var(--highlight);
+}
+@media (hover: none) {
+    .diary-body__anchor { opacity: 0.6; }
+}
+
 .diary-body__list {
     list-style: none;
     margin: 0 0 24px;
@@ -659,7 +768,7 @@
     position: relative;
     padding-left: 28px;
     margin-bottom: 12px;
-    font-size: 15px;
+    font-size: 14px;
     line-height: 1.8;
     color: var(--fg);
 }
@@ -712,6 +821,39 @@
     border-bottom: 1px solid var(--border);
     background: var(--bg);
 }
+/* Code block header row (runtime renderer) — label + COPY chip share
+   one hairline; the standalone label rules above keep the static
+   prerendered pages styled unchanged */
+.diary-body__code-head {
+    display: flex;
+    align-items: center;
+    background: var(--bg);
+    border-bottom: 1px solid var(--border);
+}
+.diary-body__code-head .diary-body__code-label {
+    border-bottom: none;
+}
+.diary-body__code-copy {
+    margin-left: auto;
+    background: none;
+    border: none;
+    padding: 6px 14px;
+    cursor: none;
+    font-family: var(--font-mono);
+    font-size: 9px;
+    letter-spacing: 0.25em;
+    text-transform: uppercase;
+    color: var(--fg-dim);
+    transition: color var(--transition-raw);
+}
+.diary-body__code-copy:hover,
+.diary-body__code-copy:focus-visible {
+    color: var(--highlight);
+    outline: none;
+}
+.diary-body__code-copy[hidden] {
+    display: none;
+}
 .diary-body__code pre {
     margin: 0;
     padding: 16px 18px;
@@ -760,6 +902,115 @@
     line-height: 1.7;
     color: var(--fg-dim);
     font-style: italic;
+}
+
+/* ---- END-OF-TRANSMISSION FOOTER (next / related / rss) ---- */
+.diary-end {
+    margin-top: 56px;
+    border-top: 1px solid var(--border);
+}
+.diary-end__section {
+    padding-top: 26px;
+    margin-bottom: 34px;
+}
+.diary-end__label {
+    font-family: var(--font-mono);
+    font-size: 10px;
+    letter-spacing: 0.35em;
+    text-transform: uppercase;
+    color: var(--accent);
+    margin-bottom: 14px;
+}
+.diary-end__label::before {
+    content: '▒ ';
+    color: var(--accent-bright);
+}
+.diary-end__card {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 8px;
+    width: 100%;
+    text-align: left;
+    background: none;
+    border: 1px solid var(--border-bright);
+    padding: 18px 20px;
+    cursor: none;
+    font-family: var(--font-mono);
+    transition: border-color var(--transition-raw), background var(--transition-raw);
+}
+.diary-end__card:hover,
+.diary-end__card:focus-visible {
+    border-color: var(--highlight);
+    background: var(--bg-elevated);
+    outline: none;
+}
+.diary-end__card-label {
+    font-size: 10px;
+    letter-spacing: 0.3em;
+    text-transform: uppercase;
+    color: var(--accent-bright);
+}
+.diary-end__card-title {
+    font-family: var(--font-display);
+    font-size: 19px;
+    font-stretch: 90%;
+    line-height: 1.15;
+    letter-spacing: -0.01em;
+    text-transform: uppercase;
+    color: var(--fg-bright);
+}
+.diary-end__card-meta {
+    font-size: 10px;
+    letter-spacing: 0.25em;
+    text-transform: uppercase;
+    color: var(--fg-dim);
+    font-variant-numeric: tabular-nums;
+}
+.diary-end__card::after {
+    content: '[ OPEN ↥ ]';
+    font-family: var(--font-mono);
+    font-size: 10px;
+    letter-spacing: 0.3em;
+    text-transform: uppercase;
+    color: var(--highlight);
+    opacity: 0;
+    transition: opacity 0.15s ease;
+}
+.diary-end__card:hover::after,
+.diary-end__card:focus-visible::after {
+    opacity: 1;
+}
+.diary-end__related {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 12px;
+}
+.diary-end__rss {
+    padding-top: 24px;
+    border-top: 1px solid var(--border);
+}
+.diary-end__rss a {
+    display: inline-flex;
+    align-items: center;
+    gap: 10px;
+    color: var(--accent-bright);
+    text-decoration: none;
+    font-family: var(--font-mono);
+    font-size: 10px;
+    letter-spacing: 0.3em;
+    text-transform: uppercase;
+    border-bottom: 1px solid var(--accent);
+    padding-bottom: 4px;
+    transition: color var(--transition-raw), border-color var(--transition-raw);
+}
+.diary-end__rss a:hover,
+.diary-end__rss a:focus-visible {
+    color: var(--highlight);
+    border-bottom-color: var(--accent-bright);
+}
+.diary-end__rss-icon {
+    flex-shrink: 0;
 }
 
 /* ---- SHARE TOAST ---- */
@@ -866,6 +1117,9 @@
     .reader__date { display: none; }
     .reader__inner { padding: 40px 16px 120px; }
 
+    .diary-end__related { grid-template-columns: 1fr; }
+    .diary-end__card { padding: 16px; }
+
     .diary-footer {
         flex-direction: column;
         align-items: flex-start;
@@ -894,7 +1148,9 @@
     .plate__index,
     .plate__title.is-openable,
     .plate__open,
-    .reader { transition: none; }
+    .diary-body__anchor,
+    .reader,
+    .reader__progress { transition: none; }
 
     .diary-toast {
         transition: none;

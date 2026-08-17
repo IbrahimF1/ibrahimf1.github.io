@@ -166,10 +166,21 @@
     }
 
     // ---- Boot: the DOM is generated asynchronously from data.yaml by main.js,
-    // so poll until the target nodes exist, then wire up. ----
+    // so poll until the target nodes exist, then wire up. The poll is capped
+    // (40 × 250ms = 10s) and main.js's 'portfolio:failed' event stops it
+    // immediately when bootstrap has definitively failed. ----
+    var POLL_MS = 250;
+    var MAX_POLLS = 40;
+    var polls = 0;
+    var stopped = false;
+
+    window.addEventListener('portfolio:failed', function () { stopped = true; });
+
     function tryBoot() {
+        if (stopped) return;
         if (start()) return;
-        setTimeout(tryBoot, 250);
+        if (++polls >= MAX_POLLS) return;
+        setTimeout(tryBoot, POLL_MS);
     }
 
     if (document.readyState === 'loading') {

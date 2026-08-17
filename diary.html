@@ -46,11 +46,11 @@
     <meta name="twitter:image" content="https://ibrahimf1.github.io/assets/og-image.png">
     <!-- Structured data: Blog + BreadcrumbList -->
     <script type="application/ld+json">
-    {"@context":"https://schema.org","@graph":[{"@type":"Blog","@id":"https://ibrahimf1.github.io/diary.html#blog","name":"Dev Diary — Ibrahim Faruquee","url":"https://ibrahimf1.github.io/diary.html","inLanguage":"en-US","author":{"@type":"Person","name":"Ibrahim Faruquee","url":"https://ibrahimf1.github.io/"},"publisher":{"@type":"Person","name":"Ibrahim Faruquee","url":"https://ibrahimf1.github.io/"}},{"@type":"BreadcrumbList","@id":"https://ibrahimf1.github.io/diary.html#breadcrumb","itemListElement":[{"@type":"ListItem","position":1,"name":"Home","item":"https://ibrahimf1.github.io/"},{"@type":"ListItem","position":2,"name":"Dev Diary","item":"https://ibrahimf1.github.io/diary.html"}]}]}
+    {"@context":"https://schema.org","@graph":[{"@type":"Blog","@id":"https://ibrahimf1.github.io/diary.html#blog","name":"Dev Diary — Ibrahim Faruquee","url":"https://ibrahimf1.github.io/diary.html","blogPost":[{"@id":"https://ibrahimf1.github.io/diary/entries/01-faceybuk-role-split.html","name":"WHY ONE INTERFACE FELT WRONG"},{"@id":"https://ibrahimf1.github.io/diary/entries/02-scenesplat-3d-markers.html","name":"3D MARKERS FROM A FLAT SCREENSHOT"},{"@id":"https://ibrahimf1.github.io/diary/entries/03-heat-aware-thresholds.html","name":"WHEN TO TRUST A SINGLE THRESHOLD"}],"inLanguage":"en-US","author":{"@type":"Person","name":"Ibrahim Faruquee","url":"https://ibrahimf1.github.io/"},"publisher":{"@type":"Person","name":"Ibrahim Faruquee","url":"https://ibrahimf1.github.io/"}},{"@type":"BreadcrumbList","@id":"https://ibrahimf1.github.io/diary.html#breadcrumb","itemListElement":[{"@type":"ListItem","position":1,"name":"Home","item":"https://ibrahimf1.github.io/"},{"@type":"ListItem","position":2,"name":"Dev Diary","item":"https://ibrahimf1.github.io/diary.html"}]}]}
     </script>
     <!-- Ditherpunk favicon — static fallback, replaced at runtime by js/favicon.js -->
     <link rel="icon" type="image/svg+xml" href="assets/favicon.svg">
-    <link rel="apple-touch-icon" href="assets/favicon.svg">
+    <link rel="apple-touch-icon" href="assets/icon-180.png">
     <link rel="preload" href="fonts/Datatype.wdth.wght.woff2" as="font" type="font/woff2" crossorigin fetchpriority="high">
     <link rel="preload" href="fonts/spacemono-normal-400-latin.woff2" as="font" type="font/woff2" crossorigin>
     <!-- Space Mono is self-hosted (fonts/) with @font-face in css/style.css —
@@ -94,7 +94,10 @@
         html {
             scroll-behavior: auto;
             scrollbar-width: thin;
-            scrollbar-color: var(--fg-dim) var(--bg)
+            scrollbar-color: var(--fg-dim) var(--bg);
+            /* Reserve the gutter even while body overflow is hidden —
+               kills the ~8px layout shift when the reader overlay opens */
+            scrollbar-gutter: stable;
         }
 
         body {
@@ -237,6 +240,7 @@
     <link rel="stylesheet" href="css/diary.css">
     <link rel="stylesheet" href="css/print.css" media="print">
     <link rel="prefetch" href="index.html">
+    <link rel="prefetch" href="vendor/markdown-it.min.js">
     <!-- Umami analytics -->
     <script defer src="https://cloud.umami.is/script.js" data-website-id="5cc65dfa-2570-4543-b045-535f415f3fdd"></script>
 </head>
@@ -284,7 +288,7 @@
         <!-- /prerender:diaryHeader --></header>
 
         <div class="diary-stack" id="diaryStack"><!-- prerender:diaryStack -->
-            <article class="plate" data-index="01">
+            <article class="plate" data-index="01" data-entry-id="01" data-reading-time="1">
                 <div class="plate__index">01</div>
                 <div class="plate__date">2026.06.12</div>
                 <div class="plate__text">
@@ -303,7 +307,7 @@
                     <span class="plate__tick plate__tick--br"></span>
                 </div>
             </article>
-            <article class="plate plate--alt" data-index="02">
+            <article class="plate plate--alt" data-index="02" data-entry-id="02" data-reading-time="1">
                 <div class="plate__index">02</div>
                 <div class="plate__date">2026.05.28</div>
                 <div class="plate__text">
@@ -322,7 +326,7 @@
                     <span class="plate__tick plate__tick--br"></span>
                 </div>
             </article>
-            <article class="plate" data-index="03">
+            <article class="plate" data-index="03" data-entry-id="03" data-reading-time="1">
                 <div class="plate__index">03</div>
                 <div class="plate__date">2026.05.03</div>
                 <div class="plate__text">
@@ -365,6 +369,7 @@
     <!-- ==================== READER OVERLAY ==================== -->
     <!-- Fullscreen reader for an expanded transmission body. Hidden by default. -->
     <div class="reader" id="diaryReader" role="dialog" aria-modal="true" aria-hidden="true" aria-labelledby="diaryReaderTitle">
+        <div class="reader__progress" id="diaryReaderProgress" aria-hidden="true"></div>
         <div class="reader__bar">
             <div class="reader__meta">
                 <span class="reader__idx" id="diaryReaderIdx">00</span>
@@ -389,7 +394,7 @@
 
     <noscript>
         <div style="position:relative;z-index:2;max-width:680px;margin:0 auto;padding:120px var(--pad,28px) 80px;font-family:'Courier New',monospace;color:#c8c2b8;">
-            <h1 style="font-size:clamp(30px,7vw,56px);color:#f2eee7;letter-spacing:-0.02em;margin-bottom:16px;">Dev Diary</h1>
+            <p style="font-size:clamp(30px,7vw,56px);color:#f2eee7;letter-spacing:-0.02em;margin:0 0 16px;font-weight:700;">Dev Diary</p>
             <p style="font-size:15px;line-height:1.8;margin-bottom:24px;">Ibrahim Faruquee&rsquo;s development journal. The interactive transmission console needs JavaScript to render its entries &mdash; enable it to read the field notes, or head back to the portfolio.</p>
             <p><a style="color:#d4c5ab;font-size:13px;letter-spacing:0.2em;text-transform:uppercase;" href="index.html">&larr; Return to portfolio</a></p>
             <p style="margin-top:32px;font-size:11px;letter-spacing:0.18em;text-transform:uppercase;color:#827a70;">Enable JavaScript for the full experience &mdash; or subscribe via the <a style="color:#d4c5ab;" href="rss.xml">RSS feed</a>.</p>

@@ -30,6 +30,8 @@ nav:
 
 # ---- MARQUEE BANDS ----
 # Full-bleed scrolling ticker strips dropped between sections.
+# Band 1 (after hero) sells the person; band 2 (before diary teaser)
+# surfaces the stack + diary as a discovery surface for deep scrollers.
 marquee:
   separator: "✦"
   items:
@@ -39,6 +41,20 @@ marquee:
     - "REAL-TIME SYSTEMS"
     - "DISTRIBUTED ARCHITECTURE"
     - "AWARD-WINNING BUILDS"
+
+marquee_secondary:
+  separator: "✦"
+  items:
+    - "PYTHON"
+    - "TYPESCRIPT"
+    - "REACT"
+    - "NODE.JS"
+    - "THREE.JS"
+    - "WEBRTC"
+    - "PYTORCH"
+    - "POSTGRES"
+    - "MONGODB"
+    - "READ THE DEV DIARY ↗"
 
 # ---- HERO SECTION ----
 hero:

@@ -1,11 +1,13 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom" xmlns:content="http://purl.org/rss/1.0/modules/content/">
+<rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom" xmlns:content="http://purl.org/rss/1.0/modules/content/" xmlns:dc="http://purl.org/dc/elements/1.1/">
   <channel>
     <title>Dev Diary — Ibrahim Faruquee</title>
     <link>https://ibrahimf1.github.io/diary.html</link>
     <description>Development journal of Ibrahim Faruquee — field notes on full-stack builds, applied machine learning, real-time systems, and the interfaces in between.</description>
     <language>en-us</language>
-    <lastBuildDate>Fri, 14 Aug 2026 21:27:00 GMT</lastBuildDate>
+    <copyright>© 2026 — IBRAHIM FARUQUEE</copyright>
+    <managingEditor>ifaruquee1@gmail.com (Ibrahim Faruquee)</managingEditor>
+    <lastBuildDate>Fri, 12 Jun 2026 00:00:00 GMT</lastBuildDate>
     <atom:link href="https://ibrahimf1.github.io/rss.xml" rel="self" type="application/rss+xml"/>
 
     <item>
@@ -14,6 +16,7 @@
       <guid isPermaLink="true">https://ibrahimf1.github.io/diary/entries/01-faceybuk-role-split.html</guid>
       <pubDate>Fri, 12 Jun 2026 00:00:00 GMT</pubDate>
       <description>FaceyBuk&#39;s shared parent/child UI technically worked — until splitting it by role turned a video call into a shared room. Same story, two intents.</description>
+      <dc:creator>Ibrahim Faruquee</dc:creator>
       <category>UX</category>
       <category>WEBRTC</category>
       <category>ROLE</category>
@@ -38,6 +41,7 @@ view(story.at(cursor)).mount();
       <guid isPermaLink="true">https://ibrahimf1.github.io/diary/entries/02-scenesplat-3d-markers.html</guid>
       <pubDate>Thu, 28 May 2026 00:00:00 GMT</pubDate>
       <description>Gemini finds evidence in 2D. Dropping those detections back into world space without raycasting the whole scene to death is the entire job.</description>
+      <dc:creator>Ibrahim Faruquee</dc:creator>
       <category>THREE.JS</category>
       <category>PERF</category>
       <category>AI</category>
@@ -64,6 +68,7 @@ marker.position.copy(world);
       <guid isPermaLink="true">https://ibrahimf1.github.io/diary/entries/03-heat-aware-thresholds.html</guid>
       <pubDate>Sun, 03 May 2026 00:00:00 GMT</pubDate>
       <description>Heat Aware&#39;s simplest version — one number, one phone call — is the feature, not the bug. Here&#39;s where a bare threshold holds up, and where it quietly doesn&#39;t.</description>
+      <dc:creator>Ibrahim Faruquee</dc:creator>
       <category>IOT</category>
       <category>ARCHITECTURE</category>
       <category>OPINION</category>

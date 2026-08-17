@@ -3,7 +3,7 @@
         xmlns:image="http://www.google.com/schemas/sitemap-image/1.1">
   <url>
     <loc>https://ibrahimf1.github.io/</loc>
-    <lastmod>2026-08-14</lastmod>
+    <lastmod>2026-08-17</lastmod>
     <changefreq>monthly</changefreq>
     <priority>1.0</priority>
     <image:image>
@@ -12,20 +12,29 @@
   </url>
   <url>
     <loc>https://ibrahimf1.github.io/diary.html</loc>
-    <lastmod>2026-06-12</lastmod>
+    <lastmod>2026-08-14</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.8</priority>
   </url>
   <url>
     <loc>https://ibrahimf1.github.io/diary/entries/01-faceybuk-role-split.html</loc>
-    <lastmod>2026-06-12</lastmod>
+    <lastmod>2026-08-08</lastmod>
+    <image:image>
+      <image:loc>https://ibrahimf1.github.io/assets/projects/project1.png</image:loc>
+    </image:image>
   </url>
   <url>
     <loc>https://ibrahimf1.github.io/diary/entries/02-scenesplat-3d-markers.html</loc>
-    <lastmod>2026-05-28</lastmod>
+    <lastmod>2026-08-08</lastmod>
+    <image:image>
+      <image:loc>https://ibrahimf1.github.io/assets/projects/project2-poster.jpg</image:loc>
+    </image:image>
   </url>
   <url>
     <loc>https://ibrahimf1.github.io/diary/entries/03-heat-aware-thresholds.html</loc>
-    <lastmod>2026-05-03</lastmod>
+    <lastmod>2026-08-08</lastmod>
+    <image:image>
+      <image:loc>https://ibrahimf1.github.io/assets/projects/project3.jpeg</image:loc>
+    </image:image>
   </url>
 </urlset>

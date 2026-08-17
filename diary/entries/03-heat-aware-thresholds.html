@@ -14,21 +14,27 @@
     <meta name="referrer" content="strict-origin-when-cross-origin">
     <link rel="icon" type="image/svg+xml" href="../../assets/favicon.svg">
     <link rel="alternate" type="application/rss+xml" title="Dev Diary — Ibrahim Faruquee" href="https://ibrahimf1.github.io/rss.xml">
+    <link rel="preload" href="../../fonts/spacemono-normal-400-latin.woff2" as="font" type="font/woff2" crossorigin>
     <!-- Open Graph -->
     <meta property="og:type" content="article">
     <meta property="og:title" content="WHEN TO TRUST A SINGLE THRESHOLD — Dev Diary — Ibrahim Faruquee">
     <meta property="og:description" content="Heat Aware&#39;s simplest version — one number, one phone call — is the feature, not the bug. Here&#39;s where a bare threshold holds up, and where it quietly doesn&#39;t.">
     <meta property="og:image" content="https://ibrahimf1.github.io/assets/projects/project3.jpeg">
+    <meta property="og:image:width" content="1280">
+    <meta property="og:image:height" content="626">
     <meta property="og:url" content="https://ibrahimf1.github.io/diary/entries/03-heat-aware-thresholds.html">
     <meta property="og:site_name" content="Ibrahim Faruquee">
     <meta property="og:locale" content="en_US">
+    <meta property="article:published_time" content="2026-05-03">
+    <meta property="article:modified_time" content="2026-08-08">
+    <meta property="article:author" content="https://ibrahimf1.github.io/">
     <!-- Twitter -->
     <meta name="twitter:card" content="summary_large_image">
     <meta name="twitter:title" content="WHEN TO TRUST A SINGLE THRESHOLD — Dev Diary — Ibrahim Faruquee">
     <meta name="twitter:description" content="Heat Aware&#39;s simplest version — one number, one phone call — is the feature, not the bug. Here&#39;s where a bare threshold holds up, and where it quietly doesn&#39;t.">
     <meta name="twitter:image" content="https://ibrahimf1.github.io/assets/projects/project3.jpeg">
     <!-- Structured data (JSON-LD): BlogPosting -->
-    <script type="application/ld+json">{"@context":"https://schema.org","@type":"BlogPosting","headline":"WHEN TO TRUST A SINGLE THRESHOLD","datePublished":"2026-05-03","dateModified":"2026-05-03","author":{"@type":"Person","name":"Ibrahim Faruquee","url":"https://ibrahimf1.github.io/#person"},"mainEntityOfPage":"https://ibrahimf1.github.io/diary/entries/03-heat-aware-thresholds.html","image":"https://ibrahimf1.github.io/assets/projects/project3.jpeg","inLanguage":"en-US"}</script>
+    <script type="application/ld+json">{"@context":"https://schema.org","@type":"BlogPosting","headline":"WHEN TO TRUST A SINGLE THRESHOLD","description":"Heat Aware's simplest version — one number, one phone call — is the feature, not the bug. Here's where a bare threshold holds up, and where it quietly doesn't.","keywords":"IOT, ARCHITECTURE, OPINION","wordCount":225,"articleSection":"Dev Diary","datePublished":"2026-05-03","dateModified":"2026-08-08","author":{"@type":"Person","@id":"https://ibrahimf1.github.io/#person","name":"Ibrahim Faruquee","url":"https://ibrahimf1.github.io/"},"publisher":{"@id":"https://ibrahimf1.github.io/#person"},"isPartOf":{"@id":"https://ibrahimf1.github.io/diary.html#blog"},"mainEntityOfPage":"https://ibrahimf1.github.io/diary/entries/03-heat-aware-thresholds.html","image":"https://ibrahimf1.github.io/assets/projects/project3.jpeg","inLanguage":"en-US"}</script>
     <link rel="stylesheet" href="../../css/diary.css">
     <style>
 /* Static entry shell — tokens mirror the diary.html critical CSS.
@@ -169,6 +175,21 @@ a { cursor: pointer; }
 }
 .ep-nav-btn:hover { border-color: var(--highlight); }
 .ep-nav-btn--off { color: var(--fg-dim); opacity: 0.45; }
+.ep-share { display: flex; gap: 10px; flex-wrap: wrap; }
+.ep-share__link {
+    font-family: var(--font-mono);
+    font-size: 11px;
+    letter-spacing: 0.2em;
+    text-transform: uppercase;
+    color: var(--accent-bright);
+    text-decoration: none;
+    background: none;
+    border: 1px solid var(--border-bright);
+    padding: 9px 13px;
+    cursor: pointer;
+    transition: color var(--transition-raw), border-color var(--transition-raw);
+}
+.ep-share__link:hover { color: var(--highlight); border-color: var(--highlight); }
 .ep-interactive {
     align-self: flex-start;
     font-size: 11px;
@@ -184,6 +205,8 @@ a { cursor: pointer; }
     .ep-main { padding: 40px 16px 56px; }
 }
 </style>
+    <!-- Umami analytics -->
+    <script defer src="https://cloud.umami.is/script.js" data-website-id="5cc65dfa-2570-4543-b045-535f415f3fdd"></script>
 </head>
 
 <body>
@@ -201,7 +224,7 @@ a { cursor: pointer; }
             <span>1 MIN READ</span>
         </p>
         <figure class="ep-image">
-            <picture><source srcset="../../assets/projects/project3.webp" type="image/webp"><img src="../../assets/projects/project3.jpeg" alt="Raspberry Pi wired to a digital temperature sensor on a breadboard" loading="lazy" decoding="async"></picture>
+            <picture><source srcset="../../assets/projects/project3.webp" type="image/webp"><img src="../../assets/projects/project3.jpeg" alt="Raspberry Pi wired to a digital temperature sensor on a breadboard" loading="eager" fetchpriority="high" decoding="async" width="1280" height="626"></picture>
         </figure>
         <div class="ep-body">
         <p class="diary-body__paragraph">Heat Aware's core loop is almost embarrassingly simple: poll a DS18B20, compare to a number, call Twilio if it's too hot. The temptation — especially with a Raspberry Pi and a MongoDB instance sitting right there — is to make it clever. Rolling averages. Rate-of-change. Humidity compensation. A little model. I didn't, and I've come to think that's the point.</p>
@@ -228,6 +251,11 @@ a { cursor: pointer; }
             <div class="ep-nav">
                 <a class="ep-nav-btn" href="02-scenesplat-3d-markers.html">&lsaquo; PREV: 3D MARKERS FROM A FLAT SCREENSHOT</a>
                 <span class="ep-nav-btn ep-nav-btn--off" aria-disabled="true">NEXT &rsaquo;</span>
+            </div>
+            <div class="ep-share">
+                <a class="ep-share__link" href="https://twitter.com/intent/tweet?text=WHEN%20TO%20TRUST%20A%20SINGLE%20THRESHOLD&amp;url=https%3A%2F%2Fibrahimf1.github.io%2Fdiary%2Fentries%2F03-heat-aware-thresholds.html" target="_blank" rel="noopener noreferrer">[ SHARE ON X ]</a>
+                <a class="ep-share__link" href="https://www.linkedin.com/sharing/share-offsite/?url=https%3A%2F%2Fibrahimf1.github.io%2Fdiary%2Fentries%2F03-heat-aware-thresholds.html" target="_blank" rel="noopener noreferrer">[ SHARE ON LINKEDIN ]</a>
+                <button class="ep-share__link" type="button" data-url="https://ibrahimf1.github.io/diary/entries/03-heat-aware-thresholds.html" onclick="var b=this,u=b.dataset.url,t=b.textContent;var s=function(){b.textContent=&#39;[ LINK COPIED ]&#39;;setTimeout(function(){b.textContent=t},2000)};var f=function(){try{var i=document.createElement(&#39;textarea&#39;);i.value=u;document.body.appendChild(i);i.select();document.execCommand(&#39;copy&#39;);i.remove();s()}catch(e){}};if(navigator.clipboard&amp;&amp;navigator.clipboard.writeText){navigator.clipboard.writeText(u).then(s,f)}else{f()}">[ COPY LINK ]</button>
             </div>
             <a class="ep-interactive" href="../../diary.html#entry-03">OPEN INTERACTIVE VERSION &#8599;</a>
             <p class="ep-copy">© 2026 — IBRAHIM FARUQUEE</p>

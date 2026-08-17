@@ -35,7 +35,11 @@
   var PIXEL_SIZE      = 4;
   var BG_COLOR        = [0.039, 0.039, 0.039];   // #0a0a0a body bg
   var MOUSE_LERP      = 0.04;
-  var DPR_CAP         = 2;
+  // Capped at 1: the dither pattern is drawn in 4px device-pixel chunks, so a
+  // 2x backing store doubles fragment work while the chunk grid gains no
+  // detail. uPixelSize scales with dpr, so the pattern size in CSS pixels is
+  // PIXEL_SIZE either way (~75% fragment reduction on DPR-2 screens).
+  var DPR_CAP         = 1;
   var ANIM_SPEED      = 0.05;
   var VELOCITY_LERP   = 0.03;   // smoothing for scroll velocity
   var VELOCITY_DECAY  = 0.92;   // velocity decay per frame
@@ -187,17 +191,23 @@
     '}',
     '',
     '/* ── Fractal Brownian motion (5 octaves) with flow ───── */',
+    '/* Per-octave amp decay (0.5) + lacunarity 2.0, normalized by the amp',
+    '   sum so the output is a true [0,1] range that uDensity can modulate',
+    '   (the old constant-amp/1.25 version saturated far outside [0,1]). */',
     'float fbm(vec2 uv, float t, float speed) {',
     '  vec3 p   = vec3(uv * 4.0, t * speed);',
     '  float amp  = 1.0;',
     '  float freq = 1.0;',
-    '  float sum  = 1.0;',
+    '  float sum  = 0.0;',
+    '  float norm = 0.0;',
     '',
     '  for (int i = 0; i < 5; ++i) {',
     '    sum  += amp * vnoise(p * freq);',
-    '    freq *= 1.25;',
+    '    norm += amp;',
+    '    amp  *= 0.5;',
+    '    freq *= 2.0;',
     '  }',
-    '  return sum * 0.5 + 0.5;',
+    '  return sum / norm * 0.5 + 0.5;',
     '}',
     '',
     '/* ── Domain-warped fBm for organic morphing ──────────── */',
@@ -262,8 +272,10 @@
     '',
     '  float feed = warpedFbm(scaledUV + uMouse * 0.04, uTime * uFlowSpeed, 1.0, morphAmt);',
     '',
-    '  // Density-driven threshold offset',
-    '  feed = feed * 0.5 - (1.0 - uDensity) + mGlow + interGlow;',
+    '  // Density-driven threshold offset. feed is now normalized [0,1], so it',
+    '  // maps 1:1 onto coverage (the old *0.5 pre-scale compensated for the',
+    '  // saturating fBm and would halve the density swing here).',
+    '  feed = feed - (1.0 - uDensity) + mGlow + interGlow;',
     '',
     '  // Slight vertical gradient so pattern is denser near the bottom',
     '  feed += uv.y * 0.12;',
@@ -296,8 +308,15 @@
   ].join('\n');
 
   /* ═══════════════════════════════════════════════════════════
-     COMPILE & LINK
+     COMPILE & LINK (re-runnable)
+     initGL() builds the program, its uniform locations and the VAO as one
+     unit, so the webglcontextrestored handler can recreate every GL object
+     a lost context invalidated — GL resources never survive context loss.
      ═══════════════════════════════════════════════════════════ */
+  var prog = null;
+  var loc = {};
+  var vao = null;
+
   function compile(type, src) {
     var s = gl.createShader(type);
     gl.shaderSource(s, src);
@@ -310,47 +329,92 @@
     return s;
   }
 
-  var vs = compile(gl.VERTEX_SHADER, VERT_SRC);
-  var fs = compile(gl.FRAGMENT_SHADER, FRAG_SRC);
-  if (!vs || !fs) {
-    console.error('[bayer-bg] Shader compilation failed — background disabled');
-    return;
+  function initGL() {
+    var vs = compile(gl.VERTEX_SHADER, VERT_SRC);
+    var fs = compile(gl.FRAGMENT_SHADER, FRAG_SRC);
+    if (!vs || !fs) {
+      console.error('[bayer-bg] Shader compilation failed — background disabled');
+      return false;
+    }
+    if (prog) gl.deleteProgram(prog);
+    prog = gl.createProgram();
+    gl.attachShader(prog, vs);
+    gl.attachShader(prog, fs);
+    gl.linkProgram(prog);
+    gl.deleteShader(vs);
+    gl.deleteShader(fs);
+    if (!gl.getProgramParameter(prog, gl.LINK_STATUS)) {
+      console.error('[bayer-bg] program link error:', gl.getProgramInfoLog(prog));
+      prog = null;
+      return false;
+    }
+    gl.useProgram(prog);
+
+    [
+      'uResolution', 'uTime', 'uMouse', 'uPixelSize', 'uBgColor',
+      'uColorA', 'uColorB', 'uDitherOpacity', 'uDensity',
+      'uNoiseScale', 'uFlowSpeed', 'uFlowDir',
+      'uScrollVelocity', 'uInteractive'
+    ].forEach(function (name) {
+      loc[name] = gl.getUniformLocation(prog, name);
+    });
+
+    // Static uniform
+    gl.uniform3f(loc.uBgColor, BG_COLOR[0], BG_COLOR[1], BG_COLOR[2]);
+
+    // Empty VAO — the vertex shader is gl_VertexID-driven (no attributes).
+    if (vao) gl.deleteVertexArray(vao);
+    vao = gl.createVertexArray();
+    gl.bindVertexArray(vao);
+
+    // Clear color is context state — reset it here so a restored context
+    // (which resets ALL GL state) keeps clearing to the page background.
+    gl.clearColor(BG_COLOR[0], BG_COLOR[1], BG_COLOR[2], 1.0);
+    return true;
   }
 
-  var prog = gl.createProgram();
-  gl.attachShader(prog, vs);
-  gl.attachShader(prog, fs);
-  gl.linkProgram(prog);
-  if (!gl.getProgramParameter(prog, gl.LINK_STATUS)) {
-    console.error('[bayer-bg] program link error:', gl.getProgramInfoLog(prog));
-    return;
+  if (!initGL()) return;
+
+  /* ═══════════════════════════════════════════════════════════
+     CONTEXT LOSS
+     Lost → preventDefault (so a restore can fire) and stop the rAF loop.
+     Restored → rebuild program/uniform locations/VAO, re-upload the
+     size-dependent uniforms via resize(), and resume — staying paused
+     while the tab is hidden (visibilitychange re-arms start()).
+     ═══════════════════════════════════════════════════════════ */
+  canvas.addEventListener('webglcontextlost', function (e) {
+    e.preventDefault();
+    stop();   // drawing into a dead context is wasted work
+  }, false);
+
+  canvas.addEventListener('webglcontextrestored', function () {
+    if (!initGL()) return;
+    resize();
+    // Reduced-motion has no loop; resize() → renderStatic() repaints it.
+    if (!document.hidden && !(reducedMotion && reducedMotion.matches)) start();
+  }, false);
+
+  /* ═══════════════════════════════════════════════════════════
+     REDUCED MOTION (runtime-togglable)
+     ═══════════════════════════════════════════════════════════ */
+  var reducedMotion = window.matchMedia
+    ? window.matchMedia('(prefers-reduced-motion: reduce)')
+    : null;
+  var baseAnimSpeed = (reducedMotion && reducedMotion.matches) ? 0.005 : ANIM_SPEED;
+
+  // Toggling RM mid-session takes effect immediately: on → stop the loop and
+  // paint one static frame; off → resume (unless the tab is hidden).
+  if (reducedMotion && reducedMotion.addEventListener) {
+    reducedMotion.addEventListener('change', function (e) {
+      baseAnimSpeed = e.matches ? 0.005 : ANIM_SPEED;
+      if (e.matches) {
+        stop();
+        renderStatic();
+      } else if (!document.hidden) {
+        start();
+      }
+    });
   }
-  gl.useProgram(prog);
-
-  gl.deleteShader(vs);
-  gl.deleteShader(fs);
-
-  /* ═══════════════════════════════════════════════════════════
-     UNIFORMS
-     ═══════════════════════════════════════════════════════════ */
-  var loc = {};
-  [
-    'uResolution', 'uTime', 'uMouse', 'uPixelSize', 'uBgColor',
-    'uColorA', 'uColorB', 'uDitherOpacity', 'uDensity',
-    'uNoiseScale', 'uFlowSpeed', 'uFlowDir',
-    'uScrollVelocity', 'uInteractive'
-  ].forEach(function (name) {
-    loc[name] = gl.getUniformLocation(prog, name);
-  });
-
-  // Static uniform
-  gl.uniform3f(loc.uBgColor, BG_COLOR[0], BG_COLOR[1], BG_COLOR[2]);
-
-  /* ═══════════════════════════════════════════════════════════
-     VAO
-     ═══════════════════════════════════════════════════════════ */
-  var vao = gl.createVertexArray();
-  gl.bindVertexArray(vao);
 
   /* ═══════════════════════════════════════════════════════════
      RESIZE HANDLER
@@ -366,7 +430,7 @@
     gl.uniform1f(loc.uPixelSize, PIXEL_SIZE * dpr);
     // In reduced-motion mode there is no animation loop to repaint after a
     // backing-store realloc, so redraw the static frame explicitly.
-    if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) renderStatic();
+    if (reducedMotion && reducedMotion.matches) renderStatic();
   }
   // Debounce resize: canvas backing-store realloc + uniform reset only after
   // the user stops dragging the window, not on every intermediate frame.
@@ -401,16 +465,6 @@
       rawMY = 1.0 - e.touches[0].clientY / window.innerHeight;
     }
   }, { passive: true });
-
-  /* ═══════════════════════════════════════════════════════════
-     REDUCED MOTION
-     ═══════════════════════════════════════════════════════════ */
-  var reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)');
-  var baseAnimSpeed = reducedMotion.matches ? 0.005 : ANIM_SPEED;
-
-  reducedMotion.addEventListener('change', function (e) {
-    baseAnimSpeed = e.matches ? 0.005 : ANIM_SPEED;
-  });
 
   /* ═══════════════════════════════════════════════════════════
      DYNAMIC INPUT SMOOTHING
@@ -500,8 +554,6 @@
   /* ═══════════════════════════════════════════════════════════
      RENDER LOOP
      ═══════════════════════════════════════════════════════════ */
-  gl.clearColor(BG_COLOR[0], BG_COLOR[1], BG_COLOR[2], 1.0);
-
   var t0 = performance.now();
   var lastFrameTime = t0;
   var lastDraw = t0;
@@ -563,10 +615,16 @@
 
   // Reduced-motion: render a single static frame (no continuous loop) so the
   // background fully respects the motion preference and uses no idle GPU.
-  if (reducedMotion.matches) {
+  // visibilitychange is registered unconditionally so an RM toggle at runtime
+  // still suspends/resumes the loop correctly.
+  document.addEventListener('visibilitychange', function () {
+    if (document.hidden) stop();
+    else if (!(reducedMotion && reducedMotion.matches)) start();
+  });
+
+  if (reducedMotion && reducedMotion.matches) {
     renderStatic();
   } else {
-    document.addEventListener('visibilitychange', function () { if (document.hidden) stop(); else start(); });
     start();
   }
 

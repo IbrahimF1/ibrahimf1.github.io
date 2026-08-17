@@ -74,10 +74,39 @@
 
         const proxy = (tokens, idx, options, env, self) => self.renderToken(tokens, idx, options);
 
+        // Slug dedupe registry — keyed by the render's token array so the
+        // scope is exactly one markdown-it render pass (one entry body).
+        const slugCounts = new WeakMap();
+
+        const slugifyHeading = (text) => {
+            const slug = String(text || '').trim().toLowerCase()
+                .replace(/[^a-z0-9]+/g, '-')
+                .replace(/^-+|-+$/g, '');
+            return slug || 'section';
+        };
+
         const headingOpen = md.renderer.rules.heading_open || proxy;
         md.renderer.rules.heading_open = function (tokens, idx, options, env, self) {
             tokens[idx].attrJoin('class', 'diary-body__heading');
+            // Stable slugified id so headings are deep-linkable anchors.
+            let used = slugCounts.get(tokens);
+            if (!used) { used = Object.create(null); slugCounts.set(tokens, used); }
+            let slug = slugifyHeading(tokens[idx + 1] && tokens[idx + 1].content);
+            used[slug] = (used[slug] || 0) + 1;
+            if (used[slug] > 1) slug += '-' + used[slug];
+            tokens[idx].attrSet('id', slug);
             return headingOpen(tokens, idx, options, env, self);
+        };
+
+        const headingClose = md.renderer.rules.heading_close || proxy;
+        md.renderer.rules.heading_close = function (tokens, idx, options, env, self) {
+            // Hover "#" anchor — rides along inside the heading, links to its id.
+            const open = tokens[idx - 2];
+            const id = open && open.attrGet ? open.attrGet('id') : null;
+            const anchor = id
+                ? `<a class="diary-body__anchor" href="#${md.utils.escapeHtml(id)}" aria-label="Link to this section">#</a>`
+                : '';
+            return anchor + headingClose(tokens, idx, options, env, self);
         };
 
         const paragraphOpen = md.renderer.rules.paragraph_open || proxy;
@@ -109,8 +138,12 @@
             const label = lang
                 ? `<span class="diary-body__code-label">${md.utils.escapeHtml(lang)}</span>`
                 : '';
+            // COPY chip — clicks are handled by delegation on the reader
+            // inner container (bodies are cached as HTML, so listeners
+            // baked here would never survive a re-render).
+            const copy = '<button class="diary-body__code-copy" type="button" aria-label="Copy code to clipboard">COPY ⧉</button>';
             const code = md.utils.escapeHtml(token.content);
-            return `<div class="diary-body__code">${label}<pre>${code}</pre></div>`;
+            return `<div class="diary-body__code"><div class="diary-body__code-head">${label}${copy}</div><pre>${code}</pre></div>`;
         };
 
         mdParser = md;
@@ -203,6 +236,10 @@
         const header = document.getElementById('diaryHeader');
         if (!header) return;
 
+        // Hydration: the prerendered shell already filled this container —
+        // clear it or every element renders twice (two <h1>s, doubled intro).
+        header.replaceChildren();
+
         header.appendChild(el('div', 'diary-header__kicker', 'FIELD NOTES // DEV JOURNAL'));
 
         const rawTitle = page.title || 'DEV_DIARY://LOG';
@@ -234,7 +271,7 @@
         return node;
     }
 
-    function generatePlate(entry, position) {
+    function generatePlate(entry, position, prerenderedReadingTime) {
         const plate = el('article', 'plate');
         plate.setAttribute('data-index', entry.index || '');
         if (position % 2 === 1) plate.classList.add('plate--alt');
@@ -256,7 +293,11 @@
             text.appendChild(el('div', 'plate__tags', '<b>&#9612;TAGS</b>&nbsp;&nbsp;' + tagsHtml));
         }
         if (entry.body) {
-            const readingTime = el('span', 'plate__reading-time', estimateReadingTime(entry.summary));
+            // Prefer the prerender tool's body-derived reading time (read
+            // from the static plate DOM before hydration cleared it); the
+            // summary-based estimate is only a fallback.
+            const readingTime = el('span', 'plate__reading-time',
+                prerenderedReadingTime || estimateReadingTime(entry.summary));
             plateReadingTimes.set(entry.index, readingTime);
             text.appendChild(readingTime);
         }
@@ -317,7 +358,19 @@
         if (navCount) navCount.textContent = `[${String(entries.length).padStart(2, '0')}]`;
 
         const stack = document.getElementById('diaryStack');
-        if (stack) entries.forEach((entry, i) => stack.appendChild(generatePlate(entry, i)));
+        if (stack) {
+            // Hydration: harvest the prerendered reading-time badges
+            // (position-keyed, attribute optional) before clearing the
+            // static plates — otherwise the diary renders twice.
+            const prerenderedTimes = [];
+            stack.querySelectorAll('.plate').forEach(plate => {
+                const span = plate.querySelector('.plate__reading-time');
+                prerenderedTimes.push(plate.dataset.readingTime ||
+                    (span && span.dataset.readingTime) || '');
+            });
+            stack.replaceChildren();
+            entries.forEach((entry, i) => stack.appendChild(generatePlate(entry, i, prerenderedTimes[i])));
+        }
 
         buildRail(entries);
 
@@ -389,16 +442,167 @@
     // Element focus was on when the reader opened — restored on close.
     let readerReturnFocus = null;
 
-    function openReader(entry) {
+    // Monotonic sequence token for async body loads — a slow, stale
+    // response must never overwrite the content of a newer open.
+    let readerSeq = 0;
+
+    // Per-entry reader scroll offsets (keyed by entry index), restored on
+    // reopen so flipping back resumes where the reader left off.
+    const readerScrollMemory = new Map();
+
+    function saveReaderScroll(entry) {
+        if (!entry || !entry.index) return;
+        const reader = document.getElementById('diaryReader');
+        const scroller = reader ? reader.querySelector('.reader__scroll') : null;
+        if (scroller) readerScrollMemory.set(entry.index, scroller.scrollTop);
+    }
+
+    function restoreReaderScroll(entry) {
+        const reader = document.getElementById('diaryReader');
+        const scroller = reader ? reader.querySelector('.reader__scroll') : null;
+        if (!scroller) return;
+        const offset = entry && entry.index ? readerScrollMemory.get(entry.index) : 0;
+        scroller.scrollTop = offset || 0;
+    }
+
+    // ---- READING PROGRESS BAR ----
+
+    // Set by initReaderProgress; refreshes the bar after content swaps.
+    let refreshReaderProgress = null;
+
+    function initReaderProgress(reader) {
+        const scroller = reader ? reader.querySelector('.reader__scroll') : null;
+        const bar = document.getElementById('diaryReaderProgress');
+        if (!scroller || !bar) return;
+        let raf = 0;
+        const update = () => {
+            raf = 0;
+            const max = scroller.scrollHeight - scroller.clientHeight;
+            const progress = max > 0 ? Math.max(0, Math.min(1, scroller.scrollTop / max)) : 0;
+            bar.style.transform = 'scaleX(' + progress.toFixed(4) + ')';
+        };
+        scroller.addEventListener('scroll', () => {
+            if (!raf) raf = requestAnimationFrame(update);
+        }, { passive: true });
+        refreshReaderProgress = update;
+    }
+
+    // ---- END-OF-TRANSMISSION FOOTER (next / related / rss) ----
+
+    const RSS_FEED_URL = 'https://ibrahimf1.github.io/rss.xml';
+
+    // Up to `max` other entries sharing tags with `entry`, best overlap first.
+    function findRelatedEntries(entry, max) {
+        if (!entry || !Array.isArray(entry.tags) || !entry.tags.length) return [];
+        const mine = new Set(entry.tags.map(t => String(t).toUpperCase()));
+        return allEntries
+            .filter(other => other && other !== entry)
+            .map(other => ({
+                entry: other,
+                shared: (Array.isArray(other.tags) ? other.tags : [])
+                    .filter(t => mine.has(String(t).toUpperCase())).length
+            }))
+            .filter(r => r.shared > 0)
+            .sort((a, b) => b.shared - a.shared ||
+                String(a.entry.index).localeCompare(String(b.entry.index)))
+            .slice(0, max)
+            .map(r => r.entry);
+    }
+
+    function buildEndCard(entry, label) {
+        const card = document.createElement('button');
+        card.type = 'button';
+        card.className = 'diary-end__card';
+        card.innerHTML =
+            `<span class="diary-end__card-label">${escapeText(label)} ${escapeText(entry.index || '')}</span>` +
+            `<span class="diary-end__card-title">${escapeText(entry.title || '')}</span>` +
+            `<span class="diary-end__card-meta">${escapeText(entry.date || '')}</span>`;
+        card.addEventListener('click', () => openReader(entry));
+        return card;
+    }
+
+    // Appends the engagement footer AFTER the rendered body (never cached
+    // with it — the bodyCache stays pure entry HTML).
+    function appendEngagementFooter(inner, entry) {
+        if (!inner || !entry || !allEntries.length) return;
+        const idx = allEntries.indexOf(entry);
+        if (idx === -1) return;
+
+        const footer = el('footer', 'diary-end');
+
+        // NEXT TRANSMISSION — wraps around to the first entry.
+        const nextEntry = allEntries[(idx + 1) % allEntries.length];
+        const nextBlock = el('div', 'diary-end__section');
+        nextBlock.appendChild(el('div', 'diary-end__label', 'NEXT TRANSMISSION'));
+        nextBlock.appendChild(buildEndCard(nextEntry, 'OPEN_TRANSMISSION'));
+        footer.appendChild(nextBlock);
+
+        // RELATED — up to 2 tag-sharing entries; skipped when none share.
+        const related = findRelatedEntries(entry, 2).filter(r => r !== nextEntry);
+        if (related.length) {
+            const relBlock = el('div', 'diary-end__section');
+            relBlock.appendChild(el('div', 'diary-end__label', 'RELATED'));
+            const row = el('div', 'diary-end__related');
+            related.forEach(r => row.appendChild(buildEndCard(r, 'TRANSMISSION')));
+            relBlock.appendChild(row);
+            footer.appendChild(relBlock);
+        }
+
+        // RSS subscribe line — feed-icon glyph in the hairline mono style.
+        const rss = el('div', 'diary-end__rss');
+        rss.innerHTML =
+            '<a href="' + RSS_FEED_URL + '" target="_blank" rel="noopener noreferrer">' +
+            '<svg class="diary-end__rss-icon" viewBox="0 0 24 24" width="14" height="14" aria-hidden="true" focusable="false">' +
+            '<path fill="none" stroke="currentColor" stroke-width="1.5" d="M4 4a16 16 0 0 1 16 16M4 10.5A9.5 9.5 0 0 1 13.5 20M4 17a3 3 0 0 1 3 3"/>' +
+            '<circle cx="5.4" cy="18.6" r="1.4" fill="currentColor"/>' +
+            '</svg>' +
+            '<span>SUBSCRIBE // RSS FEED</span></a>';
+        footer.appendChild(rss);
+
+        inner.appendChild(footer);
+    }
+
+    // ---- CODE COPY (fence COPY chips) ----
+
+    // Hides COPY chips on browsers without the Clipboard API (the chip is
+    // decorative dead weight there). Runs on every body swap.
+    function enhanceCodeBlocks(inner) {
+        if (!inner) return;
+        if (!(navigator.clipboard && navigator.clipboard.writeText)) {
+            inner.querySelectorAll('.diary-body__code-copy').forEach(btn => { btn.hidden = true; });
+        }
+    }
+
+    function copyCodeToClipboard(text) {
+        if (navigator.clipboard && navigator.clipboard.writeText) {
+            navigator.clipboard.writeText(text).then(
+                () => showToast('CODE COPIED'),
+                () => showToast('COPY FAILED')
+            );
+        } else {
+            showToast(legacyCopyText(text) ? 'CODE COPIED' : 'COPY FAILED');
+        }
+    }
+
+    function openReader(entry, opts) {
+        const options = opts || {};
         const reader = document.getElementById('diaryReader');
         const inner = document.getElementById('diaryReaderInner');
         if (!reader || !inner) return;
+
+        const wasOpen = reader.classList.contains('is-open');
+
+        // Stash the outgoing entry's scroll offset before switching.
+        if (wasOpen && currentEntry && currentEntry !== entry) saveReaderScroll(currentEntry);
+
+        // Invalidate any in-flight body load for the previous entry.
+        const seq = ++readerSeq;
 
         currentEntry = entry;
 
         // Only capture the origin on a cold open — neighbor flips shouldn't
         // overwrite it with focus that already lives inside the reader.
-        if (!reader.classList.contains('is-open')) {
+        if (!wasOpen) {
             readerReturnFocus = document.activeElement;
         }
 
@@ -411,18 +615,38 @@
 
         updateShareTargets(entry);
 
+        // History: a cold open pushes #entry-NN so Back closes the reader;
+        // flips replace in place (no history flooding); history-driven
+        // opens (popstate/hashchange) leave the stack alone.
+        const applyHistory = () => {
+            if (options.viaHistory) return;
+            const target = entry && entry.index ? '#entry-' + entry.index : null;
+            if (!target || !window.history) return;
+            if (window.location.hash === target) return;
+            try {
+                if (wasOpen) history.replaceState(null, '', target);
+                else if (history.pushState) history.pushState(null, '', target);
+            } catch (e) {
+                // Exotic origins (sandboxed iframe) — deep link is best-effort.
+            }
+        };
+
+        // Post-content polish: engagement footer, COPY chip gating,
+        // scroll restore, progress bar.
+        const finalize = () => {
+            appendEngagementFooter(inner, entry);
+            enhanceCodeBlocks(inner);
+            restoreReaderScroll(entry);
+            if (refreshReaderProgress) refreshReaderProgress();
+        };
+
         const reveal = () => {
             reader.classList.add('is-open');
             reader.setAttribute('aria-hidden', 'false');
             document.body.style.overflow = 'hidden';
-            const scroller = reader.querySelector('.reader__scroll');
-            if (scroller) scroller.scrollTop = 0;
+            applyHistory();
             const closeBtn = document.getElementById('diaryReaderClose');
             if (closeBtn) closeBtn.focus();
-            // Persist the deep link without an extra history entry or scroll jump.
-            if (window.history && history.replaceState && entry && entry.index) {
-                history.replaceState(null, '', '#entry-' + entry.index);
-            }
         };
 
         // Cached: open immediately.
@@ -431,6 +655,7 @@
             showReadingTime(inner.innerHTML);
             reveal();
             updateReaderNav(entry);
+            finalize();
             return;
         }
 
@@ -442,30 +667,35 @@
 
         loadEntryBody(entry)
             .then(html => {
+                if (seq !== readerSeq) return; // superseded by a newer open
                 inner.innerHTML = html;
                 showReadingTime(html);
                 updatePlateReadingTime(entry, html);
             })
             .catch(err => {
+                if (seq !== readerSeq) return;
                 console.error(`Failed to load diary entry body "${entry.body}":`, err);
                 inner.innerHTML = buildBodyError(err, entry);
                 hideReadingTime();
             })
             .finally(() => {
-                const scroller = reader.querySelector('.reader__scroll');
-                if (scroller) scroller.scrollTop = 0;
+                if (seq !== readerSeq) return;
+                finalize();
             });
     }
 
-    function closeReader() {
+    function closeReader(opts) {
+        const viaHistory = !!(opts && opts.viaHistory);
         const reader = document.getElementById('diaryReader');
         if (!reader || !reader.classList.contains('is-open')) return;
+        saveReaderScroll(currentEntry);
         reader.classList.remove('is-open');
         reader.setAttribute('aria-hidden', 'true');
         document.body.style.overflow = '';
         currentEntry = null;
-        // Drop a deep-link fragment without adding a history entry.
-        if (window.history && history.replaceState && entryFromHash(window.location.hash)) {
+        // User-initiated close: collapse the pushed deep-link entry in
+        // place. History-driven closes (popstate) already moved the stack.
+        if (!viaHistory && window.history && history.replaceState && entryFromHash(window.location.hash)) {
             history.replaceState(null, '', window.location.pathname + window.location.search);
         }
         // Hand focus back to whatever opened the reader, if it's still in the DOM.
@@ -506,13 +736,49 @@
         return null;
     }
 
-    // Opens the entry matching the fragment, but only if the reader is closed.
-    function openEntryFromHash(hash) {
+    // True when a fragment is entry-shaped ("#entry-NN") even if no such
+    // entry exists — distinguishes unknown transmissions from unrelated
+    // in-page anchors (heading slugs, #diary, ...).
+    function isEntryHash(hash) {
+        return /^#?entry-.+$/i.test(String(hash || '').trim());
+    }
+
+    // Scrolls to the plate whose index is numerically closest to the
+    // requested one — the soft landing for "#entry-99" style links.
+    function scrollToNearestPlate(requested) {
+        const plates = document.querySelectorAll('.plate');
+        if (!plates.length) return;
+        const targetNum = parseInt(requested, 10);
+        let best = plates[0];
+        let bestDist = Infinity;
+        plates.forEach(p => {
+            const n = parseInt(p.dataset.index, 10);
+            const d = (isNaN(targetNum) || isNaN(n)) ? 0 : Math.abs(n - targetNum);
+            if (d < bestDist) { bestDist = d; best = p; }
+        });
+        best.scrollIntoView({
+            behavior: prefersReducedMotion ? 'auto' : 'smooth',
+            block: 'start'
+        });
+    }
+
+    // Opens the entry matching the fragment. Entry-shaped but unknown
+    // fragments (#entry-99) get a toast + nearest plate instead of silence.
+    function openEntryFromHash(hash, opts) {
         const entry = entryFromHash(hash);
-        if (!entry) return;
-        const reader = document.getElementById('diaryReader');
-        if (reader && reader.classList.contains('is-open')) return;
-        openReader(entry);
+        if (entry) {
+            const reader = document.getElementById('diaryReader');
+            const isOpen = !!(reader && reader.classList.contains('is-open'));
+            if (isOpen && entry === currentEntry) return;
+            // While the reader is open on another entry (command palette
+            // nav), the hash already moved — swap without touching history.
+            openReader(entry, { viaHistory: isOpen ? true : (opts && opts.viaHistory) });
+            return;
+        }
+        if (isEntryHash(hash)) {
+            showToast('TRANSMISSION NOT FOUND');
+            scrollToNearestPlate(String(hash).trim().replace(/^#?entry-/i, ''));
+        }
     }
 
     // Moves to a neighboring entry (-1 prev, +1 next), clamped to the list bounds.
@@ -640,7 +906,7 @@
     let toastEl = null;
     let toastTimer = 0;
 
-    function showToast(message) {
+    function showToast(message, duration) {
         if (!toastEl) {
             toastEl = el('div', 'diary-toast');
             toastEl.setAttribute('role', 'status');
@@ -650,7 +916,7 @@
         toastEl.textContent = message;
         toastEl.classList.add('is-visible');
         clearTimeout(toastTimer);
-        toastTimer = setTimeout(() => toastEl.classList.remove('is-visible'), 2400);
+        toastTimer = setTimeout(() => toastEl.classList.remove('is-visible'), duration || 2400);
     }
 
     // ---- TOUCH SWIPE (reader, prev/next) ----
@@ -719,11 +985,41 @@
 
         initSwipe(reader);
         initShare();
+        initReaderProgress(reader);
 
-        // React to fragment changes (RSS deep links) only while the reader is closed.
+        // COPY chips inside rendered bodies — delegated because bodies are
+        // cached as HTML strings and re-parsed on every open.
+        const readerInner = document.getElementById('diaryReaderInner');
+        if (readerInner) {
+            readerInner.addEventListener('click', (e) => {
+                const btn = e.target && e.target.closest ? e.target.closest('.diary-body__code-copy') : null;
+                if (!btn || btn.hidden) return;
+                const block = btn.closest('.diary-body__code');
+                const pre = block ? block.querySelector('pre') : null;
+                if (!pre) return;
+                copyCodeToClipboard(pre.textContent || '');
+            });
+        }
+
+        // Fragment changes (RSS deep links, command palette nav). Entry
+        // hashes swap/close the reader as needed; other hashes (heading
+        // anchors) leave it untouched. openEntryFromHash decides whether
+        // history needs to move based on the reader's current state.
         window.addEventListener('hashchange', () => {
-            if (reader && reader.classList.contains('is-open')) return;
-            openEntryFromHash(window.location.hash);
+            openEntryFromHash(window.location.hash, { viaHistory: false });
+        });
+
+        // Back/Forward: a cold open pushed #entry-NN, so Back with no
+        // entry hash closes the reader; Back to another entry hash swaps.
+        window.addEventListener('popstate', () => {
+            const isOpen = !!(reader && reader.classList.contains('is-open'));
+            const entry = entryFromHash(window.location.hash);
+            if (entry) {
+                if (isOpen && entry === currentEntry) return;
+                openReader(entry, { viaHistory: true });
+            } else if (isOpen) {
+                closeReader({ viaHistory: true });
+            }
         });
     }
 
@@ -917,14 +1213,15 @@
 
     // ---- IDLE PREFETCH ----
 
-    // Warms the HTTP cache for the first entry's body once the page is idle,
-    // so the likely-first reader open is instant. Best-effort — errors
-    // are swallowed and nothing is parsed here.
+    // Warms the HTTP cache for the first entry's body AND the markdown
+    // parser once the page is idle, so the likely-first reader open is
+    // instant. Best-effort — errors are swallowed and nothing is parsed.
     function prefetchFirstEntryOnIdle() {
         const whenIdle = window.requestIdleCallback
             ? window.requestIdleCallback.bind(window)
             : (cb) => setTimeout(cb, 2500);
         whenIdle(() => {
+            fetch('vendor/markdown-it.min.js', { priority: 'low' }).catch(() => {});
             const first = allEntries[0];
             if (first && first.body && !bodyCache.has(first.body)) {
                 fetch(first.body, { cache: 'default' }).catch(() => {});
@@ -955,6 +1252,14 @@
             })
             .catch(err => {
                 console.error('Dev Diary bootstrap failed:', err);
+                // Prerendered plates are already on screen — surface the
+                // failure as a compact toast instead of stacking a
+                // full-viewport error screen below the intact content.
+                const stack = document.getElementById('diaryStack');
+                if (stack && stack.children.length) {
+                    showToast('LIVE FEED UNAVAILABLE // CACHED TRANSMISSIONS', 6000);
+                    return;
+                }
                 document.body.insertAdjacentHTML('beforeend', `
                     <div style="position:relative;z-index:100;display:flex;align-items:center;justify-content:center;min-height:100vh;
                         padding:120px 30px 60px;text-align:center;">

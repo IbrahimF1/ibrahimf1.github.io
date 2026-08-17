@@ -7,8 +7,7 @@
 const SVG_ICONS = {
     github: '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor"><polygon points="23 9 23 15 22 15 22 17 21 17 21 19 20 19 20 20 19 20 19 21 18 21 18 22 16 22 16 23 15 23 15 18 14 18 14 17 15 17 15 16 17 16 17 15 18 15 18 14 19 14 19 9 18 9 18 6 16 6 16 7 15 7 15 8 14 8 14 7 10 7 10 8 9 8 9 7 8 7 8 6 6 6 6 9 5 9 5 14 6 14 6 15 7 15 7 16 9 16 9 18 7 18 7 17 6 17 6 16 4 16 4 17 5 17 5 19 6 19 6 20 9 20 9 23 8 23 8 22 6 22 6 21 5 21 5 20 4 20 4 19 3 19 3 17 2 17 2 15 1 15 1 9 2 9 2 7 3 7 3 5 4 5 4 4 5 4 5 3 7 3 7 2 9 2 9 1 15 1 15 2 17 2 17 3 19 3 19 4 20 4 20 5 21 5 21 7 22 7 22 9 23 9" /></svg>',
     github_outlined: '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="0.5" stroke-linejoin="round"><polygon points="23 9 23 15 22 15 22 17 21 17 21 19 20 19 20 20 19 20 19 21 18 21 18 22 16 22 16 23 15 23 15 18 14 18 14 17 15 17 15 16 17 16 17 15 18 15 18 14 19 14 19 9 18 9 18 6 16 6 16 7 15 7 15 8 14 8 14 7 10 7 10 8 9 8 9 7 8 7 8 6 6 6 6 9 5 9 5 14 6 14 6 15 7 15 7 16 9 16 9 18 7 18 7 17 6 17 6 16 4 16 4 17 5 17 5 19 6 19 6 20 9 20 9 23 8 23 8 22 6 22 6 21 5 21 5 20 4 20 4 19 3 19 3 17 2 17 2 15 1 15 1 9 2 9 2 7 3 7 3 5 4 5 4 4 5 4 5 3 7 3 7 2 9 2 9 1 15 1 15 2 17 2 17 3 19 3 19 4 20 4 20 5 21 5 21 7 22 7 22 9 23 9" /></svg>',
-    linkedin: '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor"><path d="m22,2v-1H2v1h-1v20h1v1h20v-1h1V2h-1Zm-9,10v8h-3v-11h3v1h1v-1h4v1h1v10h-3v-8h-3Zm-9-4v-3h3v3h-3Zm3,1v11h-3v-11h3Z" /></svg>',
-    arrow: '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><line x1="7" y1="17" x2="17" y2="7"/><polyline points="7 7 17 7 17 17"/></svg>'
+    linkedin: '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor"><path d="m22,2v-1H2v1h-1v20h1v1h20v-1h1V2h-1Zm-9,10v8h-3v-11h3v1h1v-1h4v1h1v10h-3v-8h-3Zm-9-4v-3h3v3h-3Zm3,1v11h-3v-11h3Z" /></svg>'
 };
 
 function parseSVG(svgString) {
@@ -43,6 +42,18 @@ const safeStorageSet = (key, value) => {
     try { localStorage.setItem(key, value); } catch (_) { /* no-op */ }
 };
 
+// ---- REDUCED MOTION (module level) ----
+// Single live flag so every scroll/animation branch (nav scrollTo, back-to-top,
+// keyboard nav, counters, scroll-hint) reacts to the OS setting AND to changes
+// made while the page is open.
+const REDUCE_MQ = window.matchMedia('(prefers-reduced-motion: reduce)');
+let REDUCE = REDUCE_MQ.matches;
+if (typeof REDUCE_MQ.addEventListener === 'function') {
+    REDUCE_MQ.addEventListener('change', (e) => { REDUCE = e.matches; });
+} else if (typeof REDUCE_MQ.addListener === 'function') {
+    REDUCE_MQ.addListener((e) => { REDUCE = e.matches; });  // old Safari
+}
+
 // ---- SHARED: SECTION HEAD BUILDER ----
 function buildSectionHead({ num, eyebrow, lines, goldLast, dither = true }) {
     const titleHtml = (lines || []).map((ln, i) => {
@@ -66,6 +77,11 @@ function buildSectionHead({ num, eyebrow, lines, goldLast, dither = true }) {
 function generateNav(data) {
     const navLinks = document.getElementById('navLinks');
     const mobileMenuLinks = document.getElementById('mobileMenuLinks');
+
+    // Idempotent: prerendered markup already sits between the HTML markers, so
+    // clear before generating — a plain append would duplicate every link.
+    navLinks.replaceChildren();
+    mobileMenuLinks.replaceChildren();
 
     data.nav.forEach(item => {
         const link = document.createElement('a');
@@ -105,8 +121,9 @@ function generateHero(data) {
     document.getElementById('heroLocation').textContent = hero.location || '';
     document.getElementById('heroStatus').textContent = hero.status || '';
 
-    // Stat bar
+    // Stat bar (cleared first: prerendered cells already exist between markers)
     const statsEl = document.getElementById('heroStats');
+    statsEl.replaceChildren();
     hero.stats.forEach(s => {
         const stat = document.createElement('div');
         stat.className = 'hero-stat';
@@ -121,6 +138,7 @@ function generateHero(data) {
     // icon <div.hero-social> (the attention-pulse / cursor / bayer hook, kept
     // scoped to the icon box so the pulse mask paints correctly) + a label.
     const socialEl = document.getElementById('heroSocial');
+    socialEl.replaceChildren();
     (hero.social || []).forEach(s => {
         if (!SVG_ICONS[s.platform]) return;
         const link = document.createElement('a');
@@ -147,24 +165,26 @@ function generateHero(data) {
 }
 
 function generateMarquee(data) {
-    if (!data.marquee) return;
-    const items = data.marquee.items || [];
-    const sep = data.marquee.separator || '✦';
-
     // Build the track content once, then duplicate for a seamless -50% loop.
     // Spans in the duplicated sequence carry data-dup so print/AT styles can
     // collapse them (they are a visual loop artifact, not extra content).
-    function buildSequence(dup) {
-        return items.map(t =>
+    // innerHTML assignment replaces the prerendered content wholesale, so the
+    // generator is idempotent by construction.
+    function sequence(band) {
+        const items = (band && band.items) || [];
+        const sep = (band && band.separator) || '✦';
+        const build = (dup) => items.map(t =>
             `<span class="marquee-item"${dup ? ' data-dup' : ''}>${esc(t)}</span><span class="marquee-sep"${dup ? ' data-dup' : ''}>${esc(sep)}</span>`
         ).join('');
+        return build(false) + build(true);
     }
-    const sequence = buildSequence(false);
 
-    ['marqueeTrack1', 'marqueeTrack2'].forEach(id => {
-        const track = document.getElementById(id);
-        if (track) track.innerHTML = sequence + buildSequence(true);
-    });
+    // Band 1 sells the person; band 2 surfaces the stack (marquee_secondary),
+    // falling back to the primary list when the secondary one is absent.
+    const track1 = document.getElementById('marqueeTrack1');
+    const track2 = document.getElementById('marqueeTrack2');
+    if (track1 && data.marquee) track1.innerHTML = sequence(data.marquee);
+    if (track2) track2.innerHTML = sequence(data.marquee_secondary || data.marquee);
 }
 
 function generateAbout(data) {
@@ -178,6 +198,7 @@ function generateAbout(data) {
     });
 
     const grid = document.getElementById('aboutGrid');
+    grid.replaceChildren();
     const cells = about.cells || [];
     const cellCount = Math.max(cells.length, 1);
 
@@ -200,11 +221,13 @@ function generateAbout(data) {
     `;
     grid.appendChild(intro);
 
-    // Spec cells (right column)
+    // Spec cells (right column). span comes from data.yaml (wide/tall/auto)
+    // so the --wide/--tall grid rules actually apply; unknown values → auto.
     cells.forEach((c, i) => {
         const cell = document.createElement('div');
         const hi = c.highlight ? ' about-cell--highlight' : '';
-        cell.className = `about-cell about-cell--auto${hi}`;
+        const span = ['wide', 'tall', 'auto'].includes(c.span) ? c.span : 'auto';
+        cell.className = `about-cell about-cell--${span}${hi}`;
         cell.innerHTML = `
             <span class="cell-label">${esc(c.label)}</span>
             <span class="cell-value">${esc(c.value)}</span>
@@ -292,6 +315,7 @@ function generateProjects(data) {
     });
 
     const grid = document.getElementById('projectsGrid');
+    grid.replaceChildren();
     (projects.items || []).forEach(p => {
         const tile = document.createElement('a');
         tile.className = `projects-tile projects-tile--${p.span || 'auto'}`;
@@ -378,6 +402,7 @@ function generateExperience(data) {
     });
 
     const list = document.getElementById('experienceList');
+    list.replaceChildren();
     (experience.items || []).forEach(item => {
         const row = document.createElement('div');
         row.className = 'experience-row';
@@ -442,20 +467,38 @@ function generateContact(data) {
     // ASCII portrait frame — sits in the dither-swatch grid cell on the right
     // of the title so the point-cloud canvas (js/contact-cloud.js) composes as
     // a framed tile in the section-head grid instead of a full-bleed background.
+    // The <img> inside is the universal fallback: visible until the canvas
+    // marks the frame .is-ready (no-JS / Save-Data / WebGL failure paths).
     const portraitFrame = document.createElement('div');
     portraitFrame.className = 'contact-portrait';
     portraitFrame.setAttribute('aria-hidden', 'true');
+    const portraitFallback = document.createElement('img');
+    portraitFallback.src = 'assets/profile_pic.webp';
+    portraitFallback.alt = '';
+    portraitFallback.loading = 'lazy';
+    portraitFallback.decoding = 'async';
+    portraitFrame.appendChild(portraitFallback);
     const contactTitleRow = head.querySelector('.section-titlerow');
     if (contactTitleRow) contactTitleRow.appendChild(portraitFrame);
 
+    // Sub-text under the heading (data.yaml contact.sub_text)
+    if (contact.sub_text) {
+        const sub = document.createElement('p');
+        sub.className = 'contact-subtext';
+        sub.textContent = contact.sub_text;
+        head.appendChild(sub);
+    }
+
     const grid = document.getElementById('contactGrid');
+    grid.replaceChildren();
     (contact.links || []).forEach(link => {
         const tile = document.createElement('a');
         tile.className = 'contact-tile';
         tile.href = safeUrl(link.url);
         tile.target = String(link.url || '').startsWith('http') ? '_blank' : '';
         tile.rel = 'noopener noreferrer';
-        tile.setAttribute('aria-label', link.label);
+        // No aria-label: the link text already contains label + value, and an
+        // aria-label here would clobber the value for screen readers.
         tile.innerHTML = `
             <span class="contact-tile__label">${esc(link.label)}</span>
             <span class="contact-tile__value">${esc(link.value)}</span>
@@ -492,6 +535,7 @@ function generateContact(data) {
 
     // Footer
     const footer = document.getElementById('contactFooter');
+    footer.replaceChildren();
     (contact.footer || []).forEach(t => {
         const span = document.createElement('span');
         span.textContent = t;
@@ -546,7 +590,13 @@ function initCursor() {
 }
 
 // ---- STAT COUNTERS (odometer-style count-up) ----
+// `started` guards the hidden-tab path: a page loaded in a background tab
+// freezes rAF, so the intro timeline (and its 1.2s animateCounters callback)
+// never advances before the 8s safety finish() fires — finish() re-invokes
+// this, and GSAP's ticker runs/catches up the tween once the tab shows.
+let countersStarted = false;
 function animateCounters() {
+    countersStarted = true;
     // Robust against a blocked GSAP CDN: render the final value directly so the
     // stat bar is never stuck at 0 even when the count-up tween can't run.
     const hasGsap = typeof gsap !== 'undefined';
@@ -565,7 +615,7 @@ function animateCounters() {
             suf.textContent = suffix;
             el.appendChild(suf);
         }
-        if (!to || !hasGsap) { num.nodeValue = String(Math.round(to)); return; }
+        if (REDUCE || !to || !hasGsap) { num.nodeValue = String(Math.round(to)); return; }
         const obj = { v: 0 };
         gsap.to(obj, {
             v: to,
@@ -637,6 +687,10 @@ function playStartupAnimation() {
             if (finished) return;
             finished = true;
             if (safety) clearTimeout(safety);
+            // Hidden-tab load: the timeline never reached its 1.2s callback.
+            // Kick the counters now (instant under no-GSAP/reduced-motion;
+            // tweened-and-caught-up by GSAP's ticker once visible).
+            if (!countersStarted) animateCounters();
             try {
                 gsap.set([nav, role, socialRow, scrollHint, eyebrow, ...nameLines, ...stats].filter(Boolean), {
                     clearProps: 'opacity,transform,y,x,scale,rotation'
@@ -684,21 +738,9 @@ function initAnimations(data) {
     const dot = document.querySelector('.cursor-dot');
     const ring = document.querySelector('.cursor-ring');
 
-    // Cursor hover targets
-    if (!isTouch && dot && ring) {
-        document.querySelectorAll('a, button, .projects-tile, .contact-tile, .experience-row, .about-cell').forEach(el => {
-            // Grow via transform scale (compositor-only) instead of a
-            // width/height tween (layout): the ring keeps its CSS base 40px
-            // box; borderWidth eases 1 → 0.63 in the same tween so the
-            // hairline still renders ~1px once scaled by 1.6 (0.63 × 1.6 ≈ 1).
-            el.addEventListener('mouseenter', () => {
-                gsap.to(ring, { scale: 1.6, borderWidth: 0.63, borderColor: '#f2eee7', duration: 0.2, ease: 'power2.out' });
-            });
-            el.addEventListener('mouseleave', () => {
-                gsap.to(ring, { scale: 1, borderWidth: 1, borderColor: '#827a70', duration: 0.2, ease: 'power2.out' });
-            });
-        });
-    }
+    // Cursor hover targets: handled by one delegated mouseover/mouseout pair
+    // inside the matchMedia block below (see CURSOR_HOVER) instead of ~50
+    // per-element mouseenter/mouseleave listeners.
 
     // ---- HAMBURGER ----
     const hamburger = document.querySelector('.nav-hamburger');
@@ -743,6 +785,13 @@ function initAnimations(data) {
     const navSections = data.nav.map(i => i.id);
 
     function scrollTo(targetId) {
+        // Reduced motion: jump instantly instead of tweening.
+        if (REDUCE) {
+            if (targetId === 'hero') { window.scrollTo(0, 0); return; }
+            const t = document.getElementById(targetId);
+            if (t) t.scrollIntoView();
+            return;
+        }
         if (targetId === 'hero') {
             gsap.to(window, { scrollTo: 0, duration: 0.8, ease: 'power3.inOut' });
         } else {
@@ -762,24 +811,43 @@ function initAnimations(data) {
         });
     });
 
-    // Active nav link highlight
+    // Active nav link highlight — per-section ScrollTrigger onToggle callbacks
+    // (zero per-frame getBoundingClientRect). Each section owns the scroll
+    // range from its top hitting viewport-center until the NEXT section's top
+    // does, which mirrors the old "last section whose top is above center"
+    // rule; the last section runs to the end of the page. One rect pass at
+    // init covers a mid-page reload before any toggle fires.
     const navLinks = document.querySelectorAll('.nav-link');
-    function updateActive() {
+    function setActive(id) {
+        navLinks.forEach(l => {
+            const isActive = l.dataset.target === id;
+            l.classList.toggle('is-active', isActive);
+            if (isActive) l.setAttribute('aria-current', 'true');
+            else l.removeAttribute('aria-current');
+        });
+    }
+    navSections.forEach((id, i) => {
+        const el = document.getElementById(id);
+        if (!el) return;
+        const next = navSections[i + 1] ? document.getElementById(navSections[i + 1]) : null;
+        const cfg = {
+            trigger: el,
+            start: 'top center',
+            onToggle: (self) => { if (self.isActive) setActive(id); }
+        };
+        if (next) { cfg.endTrigger = next; cfg.end = 'top center'; }
+        else { cfg.end = 'max'; }
+        ScrollTrigger.create(cfg);
+    });
+    (function updateActive() {
         const center = window.innerHeight / 2;
         let active = navSections[0];
         navSections.forEach(id => {
             const el = document.getElementById(id);
             if (el && el.getBoundingClientRect().top <= center) active = id;
         });
-        navLinks.forEach(l => {
-            const isActive = l.dataset.target === active;
-            l.classList.toggle('is-active', isActive);
-            if (isActive) l.setAttribute('aria-current', 'true');
-            else l.removeAttribute('aria-current');
-        });
-    }
-    ScrollTrigger.create({ trigger: 'body', start: 'top top', end: 'bottom bottom', onUpdate: updateActive });
-    updateActive();
+        setActive(active);
+    })();
 
     // ---- RESPONSIVE ANIMATIONS ----
     const mm = gsap.matchMedia();
@@ -796,6 +864,29 @@ function initAnimations(data) {
         if (reduceMotion) {
             // Reveal everything; just draw counters if not done.
             return () => listenerSignal.abort();
+        }
+
+        // ---- CURSOR HOVER (delegated) ----
+        // One mouseover/mouseout pair on document replaces ~50 per-element
+        // mouseenter/mouseleave listeners. closest() resolves the target; the
+        // relatedTarget containment check keeps enter/leave semantics exact
+        // when the pointer moves between descendants of the same host.
+        // Grow via transform scale (compositor-only) instead of a width/height
+        // tween (layout): the ring keeps its CSS base 40px box; borderWidth
+        // eases 1 → 0.63 in the same tween so the hairline still renders ~1px
+        // once scaled by 1.6 (0.63 × 1.6 ≈ 1).
+        if (!isTouch && dot && ring) {
+            const CURSOR_HOVER = 'a, button, .projects-tile, .contact-tile, .experience-row, .about-cell';
+            on(document, 'mouseover', (e) => {
+                const t = e.target.closest(CURSOR_HOVER);
+                if (!t || t.contains(e.relatedTarget)) return;
+                gsap.to(ring, { scale: 1.6, borderWidth: 0.63, borderColor: '#f2eee7', duration: 0.2, ease: 'power2.out' });
+            });
+            on(document, 'mouseout', (e) => {
+                const t = e.target.closest(CURSOR_HOVER);
+                if (!t || t.contains(e.relatedTarget)) return;
+                gsap.to(ring, { scale: 1, borderWidth: 1, borderColor: '#827a70', duration: 0.2, ease: 'power2.out' });
+            });
         }
 
         // ---- HERO PARALLAX (non-pinned) ----
@@ -899,29 +990,27 @@ function initAnimations(data) {
         }
 
         // ---- BAYER BACKGROUND SYNC ----
+        // (setSectionProgress call chain removed: bayer-background.js treats
+        // it as a legacy no-op, so its body-wide per-update trigger was dead
+        // scroll work. Only the real velocity feed remains.)
         if (window.bayerBg) {
-            const sectionEls = navSections.map(id => document.getElementById(id)).filter(Boolean);
-            if (sectionEls.length) {
-                ScrollTrigger.create({
-                    trigger: 'body', start: 'top top', end: 'bottom bottom',
-                    onUpdate: () => {
-                        const total = document.documentElement.scrollHeight - window.innerHeight;
-                        if (total <= 0) return;
-                        window.bayerBg.setSectionProgress((window.scrollY / total) * sectionEls.length);
-                    }
-                });
-                ScrollTrigger.create({
-                    trigger: 'body', start: 'top top', end: 'bottom bottom',
-                    onUpdate: (self) => {
-                        window.bayerBg.setScrollVelocity(Math.min(Math.abs(self.getVelocity()) / 5000, 1));
-                    }
-                });
-                if (!isTouch) {
-                    document.querySelectorAll('.projects-tile, .contact-tile, .experience-row, .nav-link, .hero-social').forEach(el => {
-                        on(el, 'mouseenter', () => window.bayerBg.setInteractive(0.5));
-                        on(el, 'mouseleave', () => window.bayerBg.setInteractive(0));
-                    });
+            ScrollTrigger.create({
+                trigger: 'body', start: 'top top', end: 'bottom bottom',
+                onUpdate: (self) => {
+                    window.bayerBg.setScrollVelocity(Math.min(Math.abs(self.getVelocity()) / 5000, 1));
                 }
+            });
+            // Glow boost: delegated pair instead of two listeners per element.
+            if (!isTouch) {
+                const GLOW_HOVER = '.projects-tile, .contact-tile, .experience-row, .nav-link, .hero-social';
+                on(document, 'mouseover', (e) => {
+                    const t = e.target.closest(GLOW_HOVER);
+                    if (t && !t.contains(e.relatedTarget)) window.bayerBg.setInteractive(0.5);
+                });
+                on(document, 'mouseout', (e) => {
+                    const t = e.target.closest(GLOW_HOVER);
+                    if (t && !t.contains(e.relatedTarget)) window.bayerBg.setInteractive(0);
+                });
             }
         }
 
@@ -954,24 +1043,28 @@ function syncDitherHoles() {
 }
 
 // ---- RESIZE / LOAD REFRESH ----
+// GSAP can be blocked (CDN-less vendored files missing): refresh only when
+// ScrollTrigger actually exists; teaser/dither sync still runs either way.
+const refreshScrollTriggers = () => {
+    if (typeof ScrollTrigger !== 'undefined') ScrollTrigger.refresh();
+};
 let resizeTimer;
 window.addEventListener('resize', () => {
     clearTimeout(resizeTimer);
-    resizeTimer = setTimeout(() => { updateProjectsTeasers(); ScrollTrigger.refresh(); syncDitherHoles(); }, 250);
+    resizeTimer = setTimeout(() => { updateProjectsTeasers(); refreshScrollTriggers(); syncDitherHoles(); }, 250);
 });
 if (document.fonts && document.fonts.ready) {
-    document.fonts.ready.then(() => { updateProjectsTeasers(); ScrollTrigger.refresh(); syncDitherHoles(); });
+    document.fonts.ready.then(() => { updateProjectsTeasers(); refreshScrollTriggers(); syncDitherHoles(); });
 }
-window.addEventListener('load', () => { updateProjectsTeasers(); ScrollTrigger.refresh(); syncDitherHoles(); });
+window.addEventListener('load', () => { updateProjectsTeasers(); refreshScrollTriggers(); syncDitherHoles(); });
 
 function refreshOnLazyImages() {
-    if (typeof ScrollTrigger === 'undefined') return;
     let t;
     document.querySelectorAll('img[loading="lazy"]').forEach(img => {
         if (img.complete && img.naturalWidth > 0) return;
         const onLoad = () => {
             clearTimeout(t);
-            t = setTimeout(() => { ScrollTrigger.refresh(); syncDitherHoles(); }, 200);
+            t = setTimeout(() => { refreshScrollTriggers(); syncDitherHoles(); }, 200);
         };
         img.addEventListener('load', onLoad, { once: true });
         img.addEventListener('error', onLoad, { once: true });
@@ -1011,6 +1104,7 @@ function initBackToTop() {
         if (!ticking) { ticking = true; requestAnimationFrame(update); }
     }, { passive: true });
     btn.addEventListener('click', () => {
+        if (REDUCE) { window.scrollTo(0, 0); return; }
         if (typeof gsap !== 'undefined') gsap.to(window, { scrollTo: 0, duration: 0.7, ease: 'power3.inOut' });
         else window.scrollTo({ top: 0, behavior: 'smooth' });
     });
@@ -1026,12 +1120,13 @@ function initScrollHint(data) {
     const firstContentId = (data.nav && data.nav[1] && data.nav[1].id) || 'about';
     hint.addEventListener('click', () => {
         const t = document.getElementById(firstContentId);
-        if (t && window.gsap) gsap.to(window, { scrollTo: { y: t, offsetY: 0 }, duration: 0.8, ease: 'power3.inOut' });
-        else if (t) t.scrollIntoView({ behavior: 'smooth' });
+        if (!t) return;
+        if (!REDUCE && window.gsap) gsap.to(window, { scrollTo: { y: t, offsetY: 0 }, duration: 0.8, ease: 'power3.inOut' });
+        else t.scrollIntoView({ behavior: REDUCE ? 'auto' : 'smooth' });
     });
-    // Fade hint out past the hero.
+    // Fade hint out past the hero (skipped under reduced motion).
     const hero = document.getElementById('hero');
-    if (hero && window.gsap) {
+    if (hero && window.gsap && !REDUCE) {
         gsap.to(hint, {
             opacity: 0, ease: 'none',
             scrollTrigger: { trigger: hero, start: 'top top', end: '25% top', scrub: true }
@@ -1040,9 +1135,10 @@ function initScrollHint(data) {
 }
 
 // ---- KEYBOARD SECTION NAVIGATION ----
-// Number keys 1–N jump to each section; Home/End go to top/bottom; PageUp/Down
-// step by viewport. Only fires when not typing in a field. Surfaces a toast so
-// the navigation is discoverable.
+// Number keys 1–N jump to each section (instant under reduced motion).
+// Home/End/PageUp/Down are left to the browser's native behavior. Only fires
+// when not typing in a field. Surfaces a toast so the navigation is
+// discoverable.
 function showToast(msg) {
     let toast = document.querySelector('.toast');
     if (!toast) {
@@ -1073,16 +1169,13 @@ function initKeyboardNav(data) {
             if (idx < ids.length) {
                 e.preventDefault();
                 const t = document.getElementById(ids[idx]);
-                if (t && window.gsap) gsap.to(window, { scrollTo: { y: t, offsetY: 0 }, duration: 0.8, ease: 'power3.inOut' });
+                if (t) {
+                    if (!REDUCE && window.gsap) gsap.to(window, { scrollTo: { y: t, offsetY: 0 }, duration: 0.8, ease: 'power3.inOut' });
+                    else t.scrollIntoView();
+                }
                 const labels = (data.nav || []).map(i => i.label);
                 showToast('→ ' + (labels[idx] || ids[idx].toUpperCase()));
             }
-            return;
-        }
-        if (e.key === 'Home') { e.preventDefault(); window.gsap ? gsap.to(window, { scrollTo: 0, duration: 0.6 }) : window.scrollTo(0, 0); return; }
-        if (e.key === 'End' && window.gsap) {
-            e.preventDefault();
-            gsap.to(window, { scrollTo: { y: document.documentElement.scrollHeight }, duration: 0.6 });
         }
     });
 }
@@ -1157,24 +1250,25 @@ function initKeyboardNav(data) {
         .catch(err => {
             console.error('Portfolio bootstrap failed:', err);
             const msg = esc(err && err.message ? err.message : String(err));
-            document.body.innerHTML = `
-                <div style="display:flex;align-items:center;justify-content:center;height:100vh;
-                    background:#0a0a0a;color:#c8c2b8;font-family:monospace;text-align:center;padding:20px;">
-                    <div>
-                        <p style="font-size:11px;letter-spacing:0.3em;text-transform:uppercase;margin-bottom:10px;">SYS::ERROR</p>
-                        <p style="color:#827a70;font-size:13px;">Failed to load data.yaml — ${msg}</p>
-                        <p style="margin-top:18px;">
-                            <button type="button" id="bootRetry" style="background:none;border:1px solid #827a70;color:#c8c2b8;
-                                font-family:monospace;font-size:11px;letter-spacing:0.2em;text-transform:uppercase;
-                                padding:8px 16px;cursor:pointer;">RETRY ↻</button><a
-                                href="mailto:ifaruquee1@gmail.com?subject=Portfolio%20load%20error"
-                                style="display:inline-block;border:1px solid #827a70;color:#827a70;text-decoration:none;
-                                font-family:monospace;font-size:11px;letter-spacing:0.2em;text-transform:uppercase;
-                                padding:8px 16px;margin-left:8px;">REPORT</a>
-                        </p>
-                    </div>
-                </div>`;
+            // Never destroy document.body — the prerendered static content
+            // between the HTML markers stays on screen; a compact banner is
+            // prepended above it instead.
+            const overlay = document.getElementById('startupOverlay');
+            if (overlay) overlay.remove();
+            const banner = document.createElement('div');
+            banner.className = 'boot-error';
+            banner.setAttribute('role', 'alert');
+            banner.innerHTML = `
+                <span class="boot-error__tag">SYS::ERROR</span>
+                <span class="boot-error__msg">Failed to load data.yaml — ${msg}</span>
+                <span class="boot-error__actions">
+                    <button type="button" class="boot-error__btn" id="bootRetry">RETRY ↻</button>
+                    <a class="boot-error__btn" href="mailto:ifaruquee1@gmail.com?subject=Portfolio%20load%20error">REPORT</a>
+                </span>`;
+            document.body.prepend(banner);
             const retry = document.getElementById('bootRetry');
             if (retry) retry.addEventListener('click', () => location.reload());
+            // Signal companion scripts (e.g. attention-pulse polling) to stop.
+            window.dispatchEvent(new CustomEvent('portfolio:failed', { detail: { message: msg } }));
         });
 })();
