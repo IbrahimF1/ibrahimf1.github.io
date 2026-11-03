@@ -18,9 +18,16 @@ experience, and contact chapters.
 - `dither.js`: optional three.js Bayer-dither paper field
 - `vendor/three-dither.min.js`: the tree-shaken three.js build the field uses
 - `assets/hero-fill.mp4`, `assets/hero-poster.webp`: the web-encoded hero film and its poster
-- `assets/favicon.svg`, `assets/favicon-32.png`: the `IF` monogram favicon, set in Newsreader
+- `favicon.ico`, `assets/favicon.svg`, `assets/favicon-96.png`: the signature
+  `I.` favicon, set in Newsreader's small-optical-size master
+- `assets/apple-touch-icon.png`: the 180 px iOS home-screen icon
 - `assets/fonts/`: Manrope and Newsreader WOFF2 files
 - `assets/optimized/`: project and portrait media
+
+The favicon is the hero's signature reduced to a mark: a Newsreader `I` and the
+persimmon full stop. It uses the 6 pt optical master at weight 700 so the serifs
+survive at 16 px, and an opaque paper tile keeps it legible in light and dark
+browser chrome.
 
 ## Running it
 
